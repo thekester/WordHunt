@@ -83,7 +83,7 @@ jobs:
         id: run_scraping
         run: |
           # 1) Run your Python script
-          python scripts/dicolink.py
+          python dicolink/dicolink.py
 
           # 2) Extract the date in a single line to avoid YAML key errors
           RAW_DATE=$(python -c "import glob, json; \

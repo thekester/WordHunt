@@ -15,7 +15,7 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest pipelines will use ubuntu-24.04 soon. For more details, see https://github.com/actions/runner-images/issues/10636
     env:
       DATE: ''
       RAW_DATE: ''

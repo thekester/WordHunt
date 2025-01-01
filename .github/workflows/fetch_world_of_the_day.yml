@@ -1,5 +1,9 @@
 name: Fetch Word of the Day
 
+# 1. Grant write permissions to the GITHUB_TOKEN
+permissions:
+  contents: write  # Grants write access to repository contents
+
 on:
   schedule:
     - cron: '0 8 * * *'  # Every day at 08:00 UTC
@@ -15,13 +19,14 @@ jobs:
     env:
       DATE: ''
       RAW_DATE: ''
-      BRANCH_NAME : ''
       HOLDING_BRANCH: 'holding'  # Name of the holding branch
 
     steps:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # Ensure credentials are persisted (default is true)
 
       # Step 2: Ensure the holding branch exists
       - name: Ensure holding branch exists
@@ -103,7 +108,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' && env.RAW_DATE != 'Unknown Date' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.CREATE_PR_TOKEN }}
+          token: ${{ secrets.CREATE_PR_TOKEN }}  # Use your PAT or another token with PR permissions
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"

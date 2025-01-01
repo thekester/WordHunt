@@ -3,25 +3,49 @@ name: Fetch Word of the Day
 on:
   schedule:
     - cron: '0 8 * * *'  # Every day at 08:00 UTC
-  workflow_dispatch:
+  workflow_dispatch:      # Allows manual triggering
+  push:
+    branches:
+      - dev
+      - main
 
 jobs:
   fetch_word:
     runs-on: ubuntu-latest
     env:
       DATE: ''
+      RAW_DATE: ''
+      BRANCH_NAME : ''
+      HOLDING_BRANCH: 'holding'  # Name of the holding branch
+
     steps:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Python
+      # Step 2: Ensure the holding branch exists
+      - name: Ensure holding branch exists
+        run: |
+          # Fetch all remote branches
+          git fetch origin
+
+          # Check if the holding branch exists
+          if ! git ls-remote --heads origin ${{ env.HOLDING_BRANCH }} | grep ${{ env.HOLDING_BRANCH }}; then
+            echo "Holding branch does not exist. Creating it."
+            # Create the holding branch based on main (or any default branch)
+            git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
+            git push origin ${{ env.HOLDING_BRANCH }}
+          else
+            echo "Holding branch exists."
+          fi
+
+      # Step 3: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Step 3: Cache pip packages
+      # Step 4: Cache pip packages
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -30,46 +54,77 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Step 4: Install dependencies
+      # Step 5: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 5: Run the scraping script & extract DATE
+      # Step 6: Run scraping script and extract DATE
       - name: Run scraping script
         id: run_scraping
         run: |
           # 1) Run your Python script
           python scripts/dicolink.py
 
-          # 2) Extract the date on a single line to avoid YAML key errors
-          DATE=$(python -c "import glob, json; files = glob.glob('data/dicolink_word_of_the_day_*.json'); f=files[0] if files else None; print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
+          # 2) Extract the date in a single line to avoid YAML key errors
+          RAW_DATE=$(python -c "import glob, json; \
+          files = glob.glob('data/dicolink_word_of_the_day_*.json'); \
+          f = files[0] if files else None; \
+          print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
 
-          # 3) Export the variable to GitHub Actions
-          echo \"DATE=${DATE}\" >> $GITHUB_ENV
+          # 3) Sanitize the DATE to remove or replace invalid characters
+          SANITIZED_DATE=$(echo "$RAW_DATE" | tr ' /:' '-')
 
-      # Step 6: Configure Git
+          # 4) Export the variables to GitHub Actions
+          echo "DATE=${SANITIZED_DATE}" >> $GITHUB_ENV
+          echo "RAW_DATE=${RAW_DATE}" >> $GITHUB_ENV
+
+      # Step 7: Get current branch name (only for push events)
+      - name: Get current branch
+        if: github.event_name == 'push'
+        id: get_branch
+        run: echo "BRANCH_NAME=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
+
+      # Step 8: Configure Git
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Step 7: Commit changes
+      # Step 9: Commit changes
       - name: Commit changes
         run: |
           git add data/
-          git commit -m "Add word of the day for ${{ env.DATE }}" || echo "No changes to commit."
+          git commit -m "Add word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
 
-      # Step 8: Create Pull Request
-      - name: Create Pull Request
-        if: env.DATE != 'Unknown Date'
+      # Step 10a: Create Pull Request for Schedule Trigger
+      - name: Create Pull Request for Schedule Trigger
+        if: ${{ github.event_name == 'schedule' && env.RAW_DATE != 'Unknown Date' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          commit-message: "Add word of the day for ${{ env.DATE }}"
+          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
-          title: "Add word of the day for ${{ env.DATE }}"
-          body: "Automatically added the word of the day for **${{ env.DATE }}**."
-          base: main
-          delete-branch: true
+          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          base: ${{ env.HOLDING_BRANCH }}
+          delete-branch: false  # Do not delete the branch if changes are added
+
+      # Step 10b: Create Pull Request for Push or Manual Trigger
+      - name: Create Pull Request for Push or Manual Trigger
+        if: ${{ github.event_name != 'schedule' && env.RAW_DATE != 'Unknown Date' }}
+        uses: peter-evans/create-pull-request@v7.0.6
+        with:
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
+          branch: add-word-of-the-day-${{ env.DATE }}
+          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          base: ${{ env.BRANCH_NAME || 'main' }}
+          delete-branch: true  # Delete the branch after merging
+
+      # Step 11: Handle cases with no changes
+      - name: Handle No Changes
+        if: ${{ env.RAW_DATE == 'Unknown Date' }}
+        run: echo "No new content found for date ${RAW_DATE}. No Pull Request was created."

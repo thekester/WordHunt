@@ -63,6 +63,16 @@ jobs:
           # Push any merge commits if necessary
           git push origin ${{ env.HOLDING_BRANCH }}
 
+      # Step Y: Verify presence of data/, dicolink/, and requirements.txt
+      - name: Verify Presence of Required Files
+        run: |
+          echo "Listing data directory:"
+          ls -la data/
+          echo "Listing dicolink directory:"
+          ls -la dicolink/
+          echo "Listing requirements.txt:"
+          ls -la requirements.txt
+
       # Step 3: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4

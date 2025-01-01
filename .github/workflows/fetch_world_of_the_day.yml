@@ -1,0 +1,75 @@
+name: Fetch Word of the Day
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Every day at 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  fetch_word:
+    runs-on: ubuntu-latest
+    env:
+      DATE: ''
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Step 3: Cache pip packages
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 5: Run the scraping script & extract DATE
+      - name: Run scraping script
+        id: run_scraping
+        run: |
+          # 1) Run your Python script
+          python scripts/dicolink.py
+
+          # 2) Extract the date on a single line to avoid YAML key errors
+          DATE=$(python -c "import glob, json; files = glob.glob('data/dicolink_word_of_the_day_*.json'); f=files[0] if files else None; print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
+
+          # 3) Export the variable to GitHub Actions
+          echo \"DATE=${DATE}\" >> $GITHUB_ENV
+
+      # Step 6: Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 7: Commit changes
+      - name: Commit changes
+        run: |
+          git add data/
+          git commit -m "Add word of the day for ${{ env.DATE }}" || echo "No changes to commit."
+
+      # Step 8: Create Pull Request
+      - name: Create Pull Request
+        if: env.DATE != 'Unknown Date'
+        uses: peter-evans/create-pull-request@v7.0.6
+        with:
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          commit-message: "Add word of the day for ${{ env.DATE }}"
+          branch: add-word-of-the-day-${{ env.DATE }}
+          title: "Add word of the day for ${{ env.DATE }}"
+          body: "Automatically added the word of the day for **${{ env.DATE }}**."
+          base: main
+          delete-branch: true

@@ -15,7 +15,7 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest pipelines will use ubuntu-24.04 soon. For more details, see https://github.com/actions/runner-images/issues/10636
     env:
       DATE: ''
       RAW_DATE: ''
@@ -26,7 +26,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true  # Ensure credentials are persisted (default is true)
+          persist-credentials: true
+          ref: ${{ github.ref }}
+
+      # Step X: Verify current branch and git status
+      - name: Verify Git Branch and Status
+        run: |
+          echo "Current branch:"
+          git branch
+          echo "Git status:"
+          git status
+
+      # Step 8 (Moved Up): Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # Step 2: Ensure the holding branch exists and is up-to-date with main
       - name: Ensure holding branch exists and is up-to-date
@@ -53,6 +68,16 @@ jobs:
 
           # Push any merge commits if necessary
           git push origin ${{ env.HOLDING_BRANCH }}
+
+      # Step Y: Verify presence of data/, dicolink/, and requirements.txt
+      - name: Verify Presence of Required Files
+        run: |
+          echo "Listing data directory:"
+          ls -la data/
+          echo "Listing dicolink directory:"
+          ls -la dicolink/
+          echo "Listing requirements.txt:"
+          ls -la requirements.txt
 
       # Step 3: Set up Python
       - name: Set up Python
@@ -112,17 +137,21 @@ jobs:
       - name: List Generated JSON Files
         run: ls -la data/
 
+      # Step 6.6: Display contents of data/
+      - name: Display data directory
+        run: ls -la data/
+
+      # Step 6.7: Display RAW_DATE and DATE
+      - name: Display RAW_DATE and DATE
+        run: |
+          echo "RAW_DATE=${RAW_DATE}"
+          echo "DATE=${DATE}"
+
       # Step 7: Get current branch name (only for push events)
       - name: Get current branch
         if: github.event_name == 'push'
         id: get_branch
         run: echo "BRANCH_NAME=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
-
-      # Step 8: Configure Git
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # Step 9: Commit changes to holding
       - name: Commit changes

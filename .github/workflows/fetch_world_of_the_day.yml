@@ -15,7 +15,7 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     env:
       DATE: ''
       RAW_DATE: ''
@@ -28,21 +28,31 @@ jobs:
         with:
           persist-credentials: true  # Ensure credentials are persisted (default is true)
 
-      # Step 2: Ensure the holding branch exists
-      - name: Ensure holding branch exists
+      # Step 2: Ensure the holding branch exists and is up-to-date with main
+      - name: Ensure holding branch exists and is up-to-date
         run: |
           # Fetch all remote branches
           git fetch origin
 
           # Check if the holding branch exists
           if ! git ls-remote --heads origin ${{ env.HOLDING_BRANCH }} | grep ${{ env.HOLDING_BRANCH }}; then
-            echo "Holding branch does not exist. Creating it."
-            # Create the holding branch based on main (or any default branch)
+            echo "Holding branch does not exist. Creating it based on main."
+            # Create the holding branch based on main
             git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
             git push origin ${{ env.HOLDING_BRANCH }}
           else
-            echo "Holding branch exists."
+            echo "Holding branch exists. Fetching the latest changes."
+            # Checkout holding branch and pull latest changes
+            git checkout ${{ env.HOLDING_BRANCH }}
+            git pull origin ${{ env.HOLDING_BRANCH }}
           fi
+
+          # Ensure holding is up-to-date with main
+          echo "Merging main into holding to synchronize."
+          git merge origin/main --no-ff -m "Synchronize holding with main" || echo "Already up to date."
+
+          # Push any merge commits if necessary
+          git push origin ${{ env.HOLDING_BRANCH }}
 
       # Step 3: Set up Python
       - name: Set up Python
@@ -114,15 +124,31 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Step 9: Commit changes
+      # Step 9: Commit changes to holding
       - name: Commit changes
         run: |
           git add data/
           git commit -m "Add word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
 
-      # Step 10a: Create Pull Request for Schedule Trigger
+      # Step 10: Detect if holding has new data compared to main
+      - name: Detect new data compared to main
+        id: detect_new_data
+        run: |
+          # Fetch main branch
+          git fetch origin main
+
+          # Compare data directories between holding and main
+          if git diff --quiet origin/main -- data/; then
+            echo "No new data to push to main."
+            echo "NEW_DATA=false" >> $GITHUB_ENV
+          else
+            echo "New data detected. Ready to push to main."
+            echo "NEW_DATA=true" >> $GITHUB_ENV
+          fi
+
+      # Step 11a: Create Pull Request for Schedule Trigger if new data exists
       - name: Create Pull Request for Schedule Trigger
-        if: ${{ github.event_name == 'schedule' && env.RAW_DATE != 'Unknown Date' }}
+        if: ${{ github.event_name == 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
@@ -133,9 +159,9 @@ jobs:
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false  # Do not delete the branch if changes are added
 
-      # Step 10b: Create Pull Request for Push or Manual Trigger
+      # Step 11b: Create Pull Request for Push or Manual Trigger if new data exists
       - name: Create Pull Request for Push or Manual Trigger
-        if: ${{ github.event_name != 'schedule' && env.RAW_DATE != 'Unknown Date' }}
+        if: ${{ github.event_name != 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
@@ -146,7 +172,7 @@ jobs:
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true  # Delete the branch after merging
 
-      # Step 11: Handle cases with no changes
+      # Step 12: Handle cases with no changes
       - name: Handle No Changes
-        if: ${{ env.RAW_DATE == 'Unknown Date' }}
+        if: ${{ env.NEW_DATA == 'false' }}
         run: echo "No new content found for date ${RAW_DATE}. No Pull Request was created."

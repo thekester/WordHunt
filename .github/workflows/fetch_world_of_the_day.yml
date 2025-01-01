@@ -26,7 +26,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true  # Ensure credentials are persisted (default is true)
+          persist-credentials: true
+          ref: ${{ github.ref }}
+
+      # Step X: Verify current branch and git status
+      - name: Verify Git Branch and Status
+        run: |
+          echo "Current branch:"
+          git branch
+          echo "Git status:"
+          git status
 
       # Step 2: Ensure the holding branch exists and is up-to-date with main
       - name: Ensure holding branch exists and is up-to-date
@@ -111,6 +120,16 @@ jobs:
       # Step 6.5: List Generated JSON Files
       - name: List Generated JSON Files
         run: ls -la data/
+
+      # Step 6.6: Display contents of data/
+      - name: Display data directory
+        run: ls -la data/
+
+      # Step 6.7: Display RAW_DATE and DATE
+      - name: Display RAW_DATE and DATE
+        run: |
+          echo "RAW_DATE=${RAW_DATE}"
+          echo "DATE=${DATE}"
 
       # Step 7: Get current branch name (only for push events)
       - name: Get current branch

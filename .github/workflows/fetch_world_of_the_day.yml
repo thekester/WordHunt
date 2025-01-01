@@ -59,6 +59,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      # Step 4.5: Print Current Working Directory
+      - name: Print Current Working Directory
+        run: pwd
+
+      # Step 4.6: List Repository Contents
+      - name: List Repository Contents
+        run: ls -la
+
+      # Step 4.7: (Optional) Display Contents of requirements.txt
+      - name: Display requirements.txt
+        if: ${{ always() }}
+        run: cat requirements.txt
+
       # Step 5: Install dependencies
       - name: Install dependencies
         run: |
@@ -85,6 +98,10 @@ jobs:
           echo "DATE=${SANITIZED_DATE}" >> $GITHUB_ENV
           echo "RAW_DATE=${RAW_DATE}" >> $GITHUB_ENV
 
+      # Step 6.5: List Generated JSON Files
+      - name: List Generated JSON Files
+        run: ls -la data/
+
       # Step 7: Get current branch name (only for push events)
       - name: Get current branch
         if: github.event_name == 'push'
@@ -108,7 +125,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' && env.RAW_DATE != 'Unknown Date' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.CREATE_PR_TOKEN }}  # Use your PAT or another token with PR permissions
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"
@@ -121,7 +138,7 @@ jobs:
         if: ${{ github.event_name != 'schedule' && env.RAW_DATE != 'Unknown Date' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.CREATE_PR_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"

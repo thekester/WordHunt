@@ -1,14 +1,14 @@
 name: Fetch Word of the Day
 
-# 1. Grant write permissions to the GITHUB_TOKEN
+# Définition des permissions nécessaires
 permissions:
-  contents: write            # Grants write access to repository contents
-  pull-requests: write      # Grants write access to pull requests
+  contents: write            # Accès en écriture aux contenus du dépôt
+  pull-requests: write      # Accès en écriture aux pull requests
 
 on:
   schedule:
-    - cron: '0 8 * * *'      # Every day at 08:00 UTC
-  workflow_dispatch:          # Allows manual triggering
+    - cron: '0 8 * * *'      # Chaque jour à 08:00 UTC
+  workflow_dispatch:          # Permet le déclenchement manuel
   push:
     branches:
       - dev
@@ -17,12 +17,15 @@ on:
 jobs:
   fetch_word:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write            # Accès en écriture aux contenus du dépôt
+      pull-requests: write      # Accès en écriture aux pull requests
     env:
       DATE: ''
       RAW_DATE: ''
-      HOLDING_BRANCH: 'holding'  # Name of the holding branch
-      NEW_DATA: 'false'          # Default value for NEW_DATA
-      BRANCH_NAME: 'main'        # Default value for BRANCH_NAME
+      HOLDING_BRANCH: 'holding'  # Nom de la branche holding
+      NEW_DATA: 'false'          # Valeur par défaut pour NEW_DATA
+      BRANCH_NAME: 'main'        # Valeur par défaut pour BRANCH_NAME
 
     steps:
       # Step 1: Checkout the repository
@@ -180,31 +183,46 @@ jobs:
             echo "NEW_DATA=true" >> $GITHUB_ENV
           fi
 
+      # Step 10.5: Verify Token Permissions
+      - name: Verify Token Permissions
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user)
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Error: Personal Access Token (PAT) has insufficient permissions or is invalid."
+            exit 1
+          else
+            echo "PAT is valid and has the necessary permissions."
+          fi
+        shell: bash
+
       # Step 11a: Create Pull Request for Schedule Trigger if new data exists
       - name: Create Pull Request for Schedule Trigger
         if: ${{ github.event_name == 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Utiliser le PAT avec les permissions appropriées
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
-          delete-branch: false  # Do not delete the branch if changes are added
+          delete-branch: false  # Ne pas supprimer la branche si des modifications sont ajoutées
 
       # Step 11b: Create Pull Request for Push or Manual Trigger if new data exists
       - name: Create Pull Request for Push or Manual Trigger
         if: ${{ github.event_name != 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Utiliser le PAT avec les permissions appropriées
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
-          delete-branch: true  # Delete the branch after merging
+          delete-branch: true  # Supprimer la branche après fusion
 
       # Step 12: Handle cases with no changes
       - name: Handle No Changes

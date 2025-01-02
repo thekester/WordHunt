@@ -16,7 +16,7 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write            # Accès en écriture aux contenus du dépôt
       pull-requests: write      # Accès en écriture aux pull requests

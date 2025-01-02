@@ -2,12 +2,13 @@ name: Fetch Word of the Day
 
 # 1. Grant write permissions to the GITHUB_TOKEN
 permissions:
-  contents: write  # Grants write access to repository contents
+  contents: write            # Grants write access to repository contents
+  pull-requests: write      # Grants write access to pull requests
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # Every day at 08:00 UTC
-  workflow_dispatch:      # Allows manual triggering
+    - cron: '0 8 * * *'      # Every day at 08:00 UTC
+  workflow_dispatch:          # Allows manual triggering
   push:
     branches:
       - dev
@@ -15,11 +16,13 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-24.04 # ubuntu-latest pipelines will use ubuntu-24.04 soon. For more details, see https://github.com/actions/runner-images/issues/10636
+    runs-on: ubuntu-latest
     env:
       DATE: ''
       RAW_DATE: ''
       HOLDING_BRANCH: 'holding'  # Name of the holding branch
+      NEW_DATA: 'false'          # Default value for NEW_DATA
+      BRANCH_NAME: 'main'        # Default value for BRANCH_NAME
 
     steps:
       # Step 1: Checkout the repository
@@ -120,9 +123,9 @@ jobs:
           # 1) Run your Python script
           python dicolink/dicolink.py
 
-          # 2) Extract the date in a single line to avoid YAML key errors
-          RAW_DATE=$(python -c "import glob, json; \
-          files = glob.glob('data/dicolink_word_of_the_day_*.json'); \
+          # 2) Extract the latest date from the JSON files
+          RAW_DATE=$(python -c "import glob, json, os; \
+          files = sorted(glob.glob('data/dicolink_word_of_the_day_*.json'), reverse=True); \
           f = files[0] if files else None; \
           print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
 
@@ -151,7 +154,9 @@ jobs:
       - name: Get current branch
         if: github.event_name == 'push'
         id: get_branch
-        run: echo "BRANCH_NAME=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
+        run: |
+          CURRENT_BRANCH=$(echo $GITHUB_REF | cut -d '/' -f 3)
+          echo "BRANCH_NAME=${CURRENT_BRANCH}" >> $GITHUB_ENV
 
       # Step 9: Commit changes to holding
       - name: Commit changes

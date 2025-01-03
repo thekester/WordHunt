@@ -1,13 +1,14 @@
 name: Fetch Word of the Day
 
-# 1. Grant write permissions to the GITHUB_TOKEN
+# Definition of necessary permissions
 permissions:
-  contents: write  # Grants write access to repository contents
+  contents: write            # Write access to repository contents
+  pull-requests: write      # Write access to pull requests
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # Every day at 08:00 UTC
-  workflow_dispatch:      # Allows manual triggering
+    - cron: '0 8 * * *'      # Every day at 08:00 UTC
+  workflow_dispatch:          # Allows manual triggering
   push:
     branches:
       - dev
@@ -15,11 +16,16 @@ on:
 
 jobs:
   fetch_word:
-    runs-on: ubuntu-24.04 # ubuntu-latest pipelines will use ubuntu-24.04 soon. For more details, see https://github.com/actions/runner-images/issues/10636
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write            # Write access to repository contents
+      pull-requests: write      # Write access to pull requests
     env:
       DATE: ''
       RAW_DATE: ''
       HOLDING_BRANCH: 'holding'  # Name of the holding branch
+      NEW_DATA: 'false'          # Default value for NEW_DATA
+      BRANCH_NAME: 'main'        # Default value for BRANCH_NAME
 
     steps:
       # Step 1: Checkout the repository
@@ -120,9 +126,9 @@ jobs:
           # 1) Run your Python script
           python dicolink/dicolink.py
 
-          # 2) Extract the date in a single line to avoid YAML key errors
-          RAW_DATE=$(python -c "import glob, json; \
-          files = glob.glob('data/dicolink_word_of_the_day_*.json'); \
+          # 2) Extract the latest date from the JSON files
+          RAW_DATE=$(python -c "import glob, json, os; \
+          files = sorted(glob.glob('data/dicolink_word_of_the_day_*.json'), reverse=True); \
           f = files[0] if files else None; \
           print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
 
@@ -151,7 +157,9 @@ jobs:
       - name: Get current branch
         if: github.event_name == 'push'
         id: get_branch
-        run: echo "BRANCH_NAME=$(echo $GITHUB_REF | cut -d '/' -f 3)" >> $GITHUB_ENV
+        run: |
+          CURRENT_BRANCH=$(echo $GITHUB_REF | cut -d '/' -f 3)
+          echo "BRANCH_NAME=${CURRENT_BRANCH}" >> $GITHUB_ENV
 
       # Step 9: Commit changes to holding
       - name: Commit changes
@@ -175,12 +183,27 @@ jobs:
             echo "NEW_DATA=true" >> $GITHUB_ENV
           fi
 
+      # Step 10.5: Verify Token Permissions
+      - name: Verify Token Permissions
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user)
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Error: Personal Access Token (PAT) has insufficient permissions or is invalid."
+            exit 1
+          else
+            echo "PAT is valid and has the necessary permissions."
+          fi
+        shell: bash
+
       # Step 11a: Create Pull Request for Schedule Trigger if new data exists
       - name: Create Pull Request for Schedule Trigger
         if: ${{ github.event_name == 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Use PAT with appropriate permissions
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"
@@ -193,7 +216,7 @@ jobs:
         if: ${{ github.event_name != 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN with write permissions
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Use PAT with appropriate permissions
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
           title: "Add word of the day for ${{ env.RAW_DATE }}"

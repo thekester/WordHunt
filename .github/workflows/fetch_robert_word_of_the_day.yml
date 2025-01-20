@@ -137,7 +137,7 @@ jobs:
       - name: Commit changes
         run: |
           git add data/
-          git commit -m "Add word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
+          git commit -m "Add Robert word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
 
       - name: Detect new data compared to main
         id: detect_new_data
@@ -170,9 +170,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
+          commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
-          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false
@@ -182,9 +182,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
+          commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           branch: add-word-of-the-day-${{ env.DATE }}
-          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true

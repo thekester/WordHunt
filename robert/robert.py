@@ -1,4 +1,4 @@
-import requests
+import subprocess
 from bs4 import BeautifulSoup
 import json
 import os
@@ -17,24 +17,25 @@ class RobertScraper:
         self.source_name = "robert"
         self.data_dir = "data"
         os.makedirs(self.data_dir, exist_ok=True)
-        # Création d'une session persistante
-        self.session = requests.Session()
-        # Définition des en-têtes pour simuler un navigateur
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/115.0.0.0 Safari/537.36'
-        })
+        # Définition de l'en-tête User-Agent pour simuler un navigateur
+        self.user_agent = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/115.0.0.0 Safari/537.36")
 
     def fetch_page(self, retries=3, delay=5):
-        """Récupère le contenu de la page avec gestion des erreurs et réessais."""
+        """Récupère le contenu de la page en utilisant curl avec gestion des erreurs et réessais."""
         for attempt in range(1, retries + 1):
             try:
-                response = self.session.get(self.url, timeout=10)
-                response.raise_for_status()
-                return response.content
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Tentative {attempt}/{retries} - Erreur lors de la récupération de {self.url}: {e}")
+                result = subprocess.run(
+                    ["curl", "-s", "-A", self.user_agent, self.url],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                return result.stdout  # Contenu HTML récupéré
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Tentative {attempt}/{retries} - Erreur lors de la récupération avec curl: {e}")
                 if attempt < retries:
                     logger.info(f"Nouvelle tentative dans {delay} secondes...")
                     time.sleep(delay)
@@ -54,7 +55,6 @@ class RobertScraper:
         definitions = []
         definitions_section = soup.find('section', class_='def')
         if definitions_section:
-            # Exemples d'extraction; ajustez selon la structure réelle du HTML
             definition_items = definitions_section.find_all('div', class_='b')
             for item in definition_items:
                 word = item.find('b').text.strip() if item.find('b') else ""
@@ -66,12 +66,8 @@ class RobertScraper:
         if date_element:
             date_text = date_element.text.strip()
         else:
-            # Format alternatif selon la langue du site ; ajustez si nécessaire
-            try:
-                # Si la date est au format localisé en français, ajustez le format
-                date_text = datetime.strptime(date_element.text.strip(), "%d %B %Y").strftime("%B %d, %Y")
-            except Exception:
-                date_text = datetime.now().strftime("%B %d, %Y")
+            # Si la date n'est pas trouvée, utiliser la date actuelle
+            date_text = datetime.now().strftime("%B %d, %Y")
 
         return word_of_the_day, definitions, date_text
 
@@ -84,7 +80,6 @@ class RobertScraper:
             "definitions": definitions
         }
 
-        # Conversion de la date pour le nom de fichier
         try:
             date_obj = datetime.strptime(date_text, "%B %d, %Y")
             formatted_date = date_obj.strftime("%Y-%m-%d")

@@ -26,11 +26,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 3. Determine which branch is most recently updated (dev or main)
-      - name: Determine which branch is more recent (dev vs main)
+      # 3. Determine which branch is most recently updated (dev vs main)
+      - name: Determine which branch is more recent
         id: pick_branch
         run: |
-          # Make sure we have fetched commits from both dev and main
+          # Fetch the latest commits for dev and main
           git fetch origin dev main
 
           # Get the last commit timestamps for dev and main
@@ -52,19 +52,29 @@ jobs:
       # 4. Merge the most recent branch into holding
       - name: Sync holding branch with the chosen branch
         run: |
-          # Check if the holding branch already exists
+          # Check if the holding branch exists on the remote
           if git ls-remote --heads origin holding | grep holding; then
-            echo "Branch holding already exists. Checking it out."
-            git checkout holding
+            echo "Remote 'holding' branch already exists."
+
+            # Check if a local holding branch also exists
+            if git rev-parse --verify holding >/dev/null 2>&1; then
+              echo "Local 'holding' branch exists. Checking it out..."
+              git checkout holding
+            else
+              echo "Local 'holding' branch does not exist. Creating it from origin/holding..."
+              git checkout -b holding origin/holding
+            fi
+
+            # Pull latest changes into local holding
             git pull origin holding
           else
-            echo "Branch holding does not exist. Creating it from $MOST_RECENT_BRANCH."
+            echo "Remote 'holding' branch does not exist. Creating it from $MOST_RECENT_BRANCH..."
             git checkout -b holding origin/${{ env.MOST_RECENT_BRANCH }}
             git push origin holding
           fi
 
-          # Merge the most recent branch into holding
+          echo "Merging $MOST_RECENT_BRANCH into holding..."
           git merge origin/${{ env.MOST_RECENT_BRANCH }} --no-ff -m "Synchronize holding with ${{ env.MOST_RECENT_BRANCH }}"
 
-          # Push any merge commit to holding
+          echo "Pushing updated 'holding' branch to origin..."
           git push origin holding

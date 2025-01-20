@@ -1,14 +1,14 @@
 name: Fetch Robert Word of the Day
 
-# Définition des permissions nécessaires
+# Define required permissions
 permissions:
-  contents: write            # Accès en écriture au contenu du dépôt
-  pull-requests: write       # Accès en écriture aux pull requests
+  contents: write            # Write access to repository content
+  pull-requests: write       # Write access to pull requests
 
 on:
   schedule:
-    - cron: '0 8 * * *'      # Tous les jours à 08:00 UTC
-  workflow_dispatch:         # Permet un déclenchement manuel
+    - cron: '0 8 * * *'      # Every day at 08:00 UTC
+  workflow_dispatch:         # Allows manual triggering
   push:
     branches:
       - dev
@@ -102,10 +102,10 @@ jobs:
       - name: Run scraping script
         id: run_scraping
         run: |
-          # Exécute le script robert/robert.py pour scraper le mot du jour
+          # Run the script robert/robert.py to scrape the word of the day
           python robert/robert.py
 
-          # Extrait la date depuis les fichiers JSON générés
+          # Extract the date from the generated JSON files
           RAW_DATE=$(python -c "import glob, json; \
           files = sorted(glob.glob('data/robert_word_of_the_day_*.json'), reverse=True); \
           f = files[0] if files else None; \

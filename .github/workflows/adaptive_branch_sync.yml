@@ -4,8 +4,8 @@ name: Adaptive Branch Sync
 
 on:
   schedule:
-    - cron: '0 8 * * *'    # Runs daily at 08:00 UTC (optional)
-  workflow_dispatch:        # Allows manual triggering
+    - cron: '0 8 * * *'
+  workflow_dispatch:
   push:
     branches:
       - dev
@@ -30,51 +30,53 @@ jobs:
       - name: Determine which branch is more recent
         id: pick_branch
         run: |
-          # Fetch the latest commits for dev and main
           git fetch origin dev main
-
-          # Get the last commit timestamps for dev and main
           DEVMOD=$(git log -1 --format="%ct" origin/dev)
           MAINMOD=$(git log -1 --format="%ct" origin/main)
 
-          echo "Last commit timestamp on dev  : $DEVMOD"
-          echo "Last commit timestamp on main : $MAINMOD"
+          echo "Last commit timestamp on dev: $DEVMOD"
+          echo "Last commit timestamp on main: $MAINMOD"
 
-          # Compare the timestamps
           if [ "$DEVMOD" -gt "$MAINMOD" ]; then
-            echo "Most recent branch: dev"
             echo "MOST_RECENT_BRANCH=dev" >> $GITHUB_ENV
+            echo "Most recent branch is dev"
           else
-            echo "Most recent branch: main"
             echo "MOST_RECENT_BRANCH=main" >> $GITHUB_ENV
+            echo "Most recent branch is main"
           fi
 
-      # 4. Merge the most recent branch into holding
+      # 4. Sync the 'holding' branch
       - name: Sync holding branch with the chosen branch
         run: |
-          # Check if the holding branch exists on the remote
-          if git ls-remote --heads origin holding | grep holding; then
-            echo "Remote 'holding' branch already exists."
+          # We'll store the chosen branch in a variable for convenience
+          MRB="${MOST_RECENT_BRANCH}"
 
-            # Check if a local holding branch also exists
+          # 1) Does 'holding' exist on the remote?
+          if git ls-remote --heads origin holding | grep holding; then
+            echo "Remote 'holding' branch exists."
+
+            # 1.a) Do we have a local 'holding' branch already?
             if git rev-parse --verify holding >/dev/null 2>&1; then
               echo "Local 'holding' branch exists. Checking it out..."
               git checkout holding
+              # Pull the latest commits for local holding
+              git pull origin holding
             else
-              echo "Local 'holding' branch does not exist. Creating it from origin/holding..."
+              echo "Local 'holding' branch does NOT exist yet. Fetching and creating it..."
+              # Make sure we fetch the remote branch so we have the commit
+              git fetch origin holding:refs/remotes/origin/holding
               git checkout -b holding origin/holding
             fi
-
-            # Pull latest changes into local holding
-            git pull origin holding
           else
-            echo "Remote 'holding' branch does not exist. Creating it from $MOST_RECENT_BRANCH..."
-            git checkout -b holding origin/${{ env.MOST_RECENT_BRANCH }}
+            echo "Remote 'holding' branch does NOT exist. Creating it from $MRB..."
+            git checkout -b holding origin/$MRB
             git push origin holding
           fi
 
-          echo "Merging $MOST_RECENT_BRANCH into holding..."
-          git merge origin/${{ env.MOST_RECENT_BRANCH }} --no-ff -m "Synchronize holding with ${{ env.MOST_RECENT_BRANCH }}"
+          # 2) Merge the most recent branch (dev or main) into holding
+          echo "Merging $MRB into holding..."
+          git fetch origin $MRB    # Ensure we have the latest from the chosen branch
+          git merge origin/$MRB --no-ff -m "Synchronize holding with $MRB"
 
-          echo "Pushing updated 'holding' branch to origin..."
+          # 3) Push any merge commits to remote holding
           git push origin holding

@@ -3,12 +3,12 @@ name: Fetch Robert Word of the Day
 # Définition des permissions nécessaires
 permissions:
   contents: write            # Accès en écriture au contenu du dépôt
-  pull-requests: write         # Accès en écriture aux pull requests
+  pull-requests: write       # Accès en écriture aux pull requests
 
 on:
   schedule:
     - cron: '0 8 * * *'      # Tous les jours à 08:00 UTC
-  workflow_dispatch:          # Permet un déclenchement manuel
+  workflow_dispatch:         # Permet un déclenchement manuel
   push:
     branches:
       - dev
@@ -66,8 +66,8 @@ jobs:
         run: |
           echo "Listing data directory:"
           ls -la data/
-          echo "Listing robert/robert.py file:"
-          ls -la robert/robert.py
+          echo "Listing robert directory contents:"
+          ls -la robert/
           echo "Listing requirements.txt:"
           ls -la requirements.txt
 

@@ -1,0 +1,70 @@
+# File: .github/workflows/adaptive_branch_sync.yml
+
+name: Adaptive Branch Sync
+
+on:
+  schedule:
+    - cron: '0 8 * * *'    # Runs daily at 08:00 UTC (optional)
+  workflow_dispatch:        # Allows manual triggering
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  pick_and_sync:
+    runs-on: ubuntu-24.04
+    
+    steps:
+      # 1. Check out the repository
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # 2. Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 3. Determine which branch is most recently updated (dev or main)
+      - name: Determine which branch is more recent (dev vs main)
+        id: pick_branch
+        run: |
+          # Make sure we have fetched commits from both dev and main
+          git fetch origin dev main
+
+          # Get the last commit timestamps for dev and main
+          DEVMOD=$(git log -1 --format="%ct" origin/dev)
+          MAINMOD=$(git log -1 --format="%ct" origin/main)
+
+          echo "Last commit timestamp on dev  : $DEVMOD"
+          echo "Last commit timestamp on main : $MAINMOD"
+
+          # Compare the timestamps
+          if [ "$DEVMOD" -gt "$MAINMOD" ]; then
+            echo "Most recent branch: dev"
+            echo "MOST_RECENT_BRANCH=dev" >> $GITHUB_ENV
+          else
+            echo "Most recent branch: main"
+            echo "MOST_RECENT_BRANCH=main" >> $GITHUB_ENV
+          fi
+
+      # 4. Merge the most recent branch into holding
+      - name: Sync holding branch with the chosen branch
+        run: |
+          # Check if the holding branch already exists
+          if git ls-remote --heads origin holding | grep holding; then
+            echo "Branch holding already exists. Checking it out."
+            git checkout holding
+            git pull origin holding
+          else
+            echo "Branch holding does not exist. Creating it from $MOST_RECENT_BRANCH."
+            git checkout -b holding origin/${{ env.MOST_RECENT_BRANCH }}
+            git push origin holding
+          fi
+
+          # Merge the most recent branch into holding
+          git merge origin/${{ env.MOST_RECENT_BRANCH }} --no-ff -m "Synchronize holding with ${{ env.MOST_RECENT_BRANCH }}"
+
+          # Push any merge commit to holding
+          git push origin holding

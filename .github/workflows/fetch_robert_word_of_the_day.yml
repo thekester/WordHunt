@@ -66,8 +66,8 @@ jobs:
         run: |
           echo "Listing data directory:"
           ls -la data/
-          echo "Listing robert.py file:"
-          ls -la robert.py
+          echo "Listing robert/robert.py file:"
+          ls -la robert/robert.py
           echo "Listing requirements.txt:"
           ls -la requirements.txt
 
@@ -102,8 +102,8 @@ jobs:
       - name: Run scraping script
         id: run_scraping
         run: |
-          # Exécute le script robert.py pour scraper le mot du jour
-          python robert.py
+          # Exécute le script robert/robert.py pour scraper le mot du jour
+          python robert/robert.py
 
           # Extrait la date depuis les fichiers JSON générés
           RAW_DATE=$(python -c "import glob, json; \

@@ -4,7 +4,7 @@ name: Adaptive Branch Sync
 
 on:
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 8 * * *'    # Runs daily at 08:00 UTC (optional)
   workflow_dispatch:
   push:
     branches:
@@ -48,7 +48,6 @@ jobs:
       # 4. Sync the 'holding' branch
       - name: Sync holding branch with the chosen branch
         run: |
-          # We'll store the chosen branch in a variable for convenience
           MRB="${MOST_RECENT_BRANCH}"
 
           # 1) Does 'holding' exist on the remote?
@@ -59,11 +58,9 @@ jobs:
             if git rev-parse --verify holding >/dev/null 2>&1; then
               echo "Local 'holding' branch exists. Checking it out..."
               git checkout holding
-              # Pull the latest commits for local holding
               git pull origin holding
             else
               echo "Local 'holding' branch does NOT exist yet. Fetching and creating it..."
-              # Make sure we fetch the remote branch so we have the commit
               git fetch origin holding:refs/remotes/origin/holding
               git checkout -b holding origin/holding
             fi
@@ -75,8 +72,11 @@ jobs:
 
           # 2) Merge the most recent branch (dev or main) into holding
           echo "Merging $MRB into holding..."
-          git fetch origin $MRB    # Ensure we have the latest from the chosen branch
-          git merge origin/$MRB --no-ff -m "Synchronize holding with $MRB"
+          git fetch origin $MRB  # Ensure we have the latest from dev or main
+          
+          # Use --allow-unrelated-histories if there's no shared commit history
+          git merge origin/$MRB --allow-unrelated-histories --no-ff -m "Synchronize holding with $MRB"
 
           # 3) Push any merge commits to remote holding
+          echo "Pushing updated 'holding' branch to origin..."
           git push origin holding

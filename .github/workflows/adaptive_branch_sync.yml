@@ -2,9 +2,15 @@
 
 name: Adaptive Branch Sync
 
+########################################
+# Permissions (so we can push commits)
+########################################
+permissions:
+  contents: write
+
 on:
   schedule:
-    - cron: '0 8 * * *'    # Runs daily at 08:00 UTC (optional)
+    - cron: '0 8 * * *'  # optional daily schedule
   workflow_dispatch:
   push:
     branches:
@@ -14,11 +20,18 @@ on:
 jobs:
   pick_and_sync:
     runs-on: ubuntu-24.04
-    
+    # Ensure the job itself also has permissions
+    permissions:
+      contents: write
+
     steps:
-      # 1. Check out the repository
+      # 1. Check out the repository using your PAT, so pushes won't get 403
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       # 2. Configure Git
       - name: Configure Git
@@ -26,16 +39,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 3. Determine which branch is most recently updated (dev vs main)
+      # 3. Determine which branch is most recently updated (dev or main)
       - name: Determine which branch is more recent
         id: pick_branch
         run: |
           git fetch origin dev main
-          DEVMOD=$(git log -1 --format="%ct" origin/dev)
-          MAINMOD=$(git log -1 --format="%ct" origin/main)
+          DEVMOD=$(git log -1 --format="%ct" origin/dev || echo 0)
+          MAINMOD=$(git log -1 --format="%ct" origin/main || echo 0)
 
-          echo "Last commit timestamp on dev: $DEVMOD"
-          echo "Last commit timestamp on main: $MAINMOD"
+          echo "Last commit timestamp on dev  : $DEVMOD"
+          echo "Last commit timestamp on main : $MAINMOD"
 
           if [ "$DEVMOD" -gt "$MAINMOD" ]; then
             echo "MOST_RECENT_BRANCH=dev" >> $GITHUB_ENV
@@ -45,22 +58,22 @@ jobs:
             echo "Most recent branch is main"
           fi
 
-      # 4. Sync the 'holding' branch
+      # 4. Sync the 'holding' branch with the chosen branch
       - name: Sync holding branch with the chosen branch
         run: |
           MRB="${MOST_RECENT_BRANCH}"
 
-          # 1) Does 'holding' exist on the remote?
+          # Check if 'holding' exists on remote
           if git ls-remote --heads origin holding | grep holding; then
             echo "Remote 'holding' branch exists."
 
-            # 1.a) Do we have a local 'holding' branch already?
+            # Check if local 'holding' already exists
             if git rev-parse --verify holding >/dev/null 2>&1; then
               echo "Local 'holding' branch exists. Checking it out..."
               git checkout holding
               git pull origin holding
             else
-              echo "Local 'holding' branch does NOT exist yet. Fetching and creating it..."
+              echo "Local 'holding' branch does NOT exist yet. Creating it from remote..."
               git fetch origin holding:refs/remotes/origin/holding
               git checkout -b holding origin/holding
             fi
@@ -70,13 +83,9 @@ jobs:
             git push origin holding
           fi
 
-          # 2) Merge the most recent branch (dev or main) into holding
           echo "Merging $MRB into holding..."
-          git fetch origin $MRB  # Ensure we have the latest from dev or main
-          
-          # Use --allow-unrelated-histories if there's no shared commit history
+          git fetch origin $MRB
           git merge origin/$MRB --allow-unrelated-histories --no-ff -m "Synchronize holding with $MRB"
 
-          # 3) Push any merge commits to remote holding
           echo "Pushing updated 'holding' branch to origin..."
           git push origin holding

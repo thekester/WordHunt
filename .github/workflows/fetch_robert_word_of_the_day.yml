@@ -187,7 +187,7 @@ jobs:
           branch: add-robert-word-of-the-day-${{ env.DATE }}
           title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the Robert word of the day for **${{ env.RAW_DATE }}**."
-          base: ${{ env.BRANCH_NAME || 'main' }}
+          base: ${{ env.HOLDING_BRANCH }}   # Mise à jour ici pour utiliser la branche holding
           delete-branch: true
       
       - name: Handle No Changes

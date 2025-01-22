@@ -207,7 +207,7 @@ jobs:
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-dicolink-word-of-the-day-${{ env.DATE }}   # Modifié ici
           title: "Add word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Dicolink word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false  # Do not delete the branch if changes are added
 
@@ -220,7 +220,7 @@ jobs:
           commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
           branch: add-dicolink-word-of-the-day-${{ env.DATE }}   # Modifié ici
           title: "Add word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Dicolink word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true  # Delete the branch after merging
 

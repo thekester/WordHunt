@@ -174,7 +174,7 @@ jobs:
           commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           branch: add-robert-word-of-the-day-${{ env.DATE }}
           title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Robert word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false
       
@@ -186,7 +186,7 @@ jobs:
           commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
           branch: add-robert-word-of-the-day-${{ env.DATE }}
           title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Robert word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true
       

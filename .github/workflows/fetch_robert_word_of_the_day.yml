@@ -111,7 +111,8 @@ jobs:
           f = files[0] if files else None; \
           print(json.load(open(f, encoding='utf-8'))['date']) if f else print('Unknown Date')")
 
-          SANITIZED_DATE=$(echo "$RAW_DATE" | tr ' /:' '-')
+          # Remplacer les espaces, barres obliques, deux-points et virgules par des tirets
+          SANITIZED_DATE=$(echo "$RAW_DATE" | tr ' /:,' '-')
 
           echo "DATE=${SANITIZED_DATE}" >> $GITHUB_ENV
           echo "RAW_DATE=${RAW_DATE}" >> $GITHUB_ENV
@@ -171,24 +172,24 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          branch: add-word-of-the-day-${{ env.DATE }}
+          branch: add-robert-word-of-the-day-${{ env.DATE }}
           title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Robert word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false
-
+      
       - name: Create Pull Request for Push or Manual Trigger
         if: ${{ github.event_name != 'schedule' && env.NEW_DATA == 'true' }}
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           commit-message: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          branch: add-word-of-the-day-${{ env.DATE }}
+          branch: add-robert-word-of-the-day-${{ env.DATE }}
           title: "Add Robert word of the day for ${{ env.RAW_DATE }}"
-          body: "Automatically added the word of the day for **${{ env.RAW_DATE }}**."
+          body: "Automatically added the Robert word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true
-
+      
       - name: Handle No Changes
         if: ${{ env.NEW_DATA == 'false' }}
         run: echo "No new content found for date ${RAW_DATE}. No Pull Request was created."

@@ -3,25 +3,14 @@
 
 WordHunt scrapes a French dictionary website to bring you a daily word along with its definitions. The project automates the process of fetching, parsing, and storing word data so that you can explore new vocabulary effortlessly.
 
-## Data Sources
-WordHunt gathers data from two French dictionary websites:
-
-- **Dicolink** – there is no official API, so the project scrapes the "mot du jour" page.
-- **Le Robert** – words are pulled from the "mot du jour" section of dictionnaire.lerobert.com.
+## Data Source
+- **Primary Source:** [Dicolink](https://www.dicolink.com/api)  
+  Currently, there is no official API available for Dicolink, so WordHunt uses web scraping to retrieve the word of the day.
 
 ## Sequence Diagram
 The following sequence diagram illustrates the workflow for fetching the word of the day using our automation:
 
 ![Sequence Diagram](images/sequencediagramDicolink.png)
-
-## Scraping Scripts
-
-The repository contains two standalone scripts:
-
-- `dicolink/dicolink.py` fetches the word of the day from Dicolink using requests and BeautifulSoup.
-- `robert/robert.py` retrieves the same information from Le Robert with curl and BeautifulSoup.
-
-Each script stores its results as a JSON file inside the `data/` directory.
 
 ## How It Works
 1. **Workflow Trigger:**  
@@ -59,11 +48,10 @@ Each script stores its results as a JSON file inside the `data/` directory.
    pip install -r requirements.txt
    ```
 
-3. **Run the Scraping Scripts:**
-   You can manually run either script to fetch the current word of the day:
+3. **Run the Scraping Script:**
+   You can manually run the script to fetch the current word of the day:
    ```bash
-   python dicolink/dicolink.py   # Fetch from Dicolink
-   python robert/robert.py     # Fetch from Le Robert
+   python dicolink/dicolink.py
    ```
 
 4. **Automated Workflow:**
@@ -76,11 +64,8 @@ Each script stores its results as a JSON file inside the `data/` directory.
 5. **Check the Data:**
    - After the script or workflow runs, check the `data/` directory for JSON files containing the latest word and its definitions.
 
-## Branching Model
-Development occurs on the `dev` branch. New data scraped by the workflows is committed to the `holding` branch and reviewed before merging into `main`. The [`adaptive_branch_sync.yml`](.github/workflows/adaptive_branch_sync.yml) workflow keeps `holding` in sync with the most recently updated branch.
-
+## Contributing
 Contributions are welcome! If you have ideas for improvements or encounter issues, please open an issue or submit a pull request.
 
 ## License
-
 This project is licensed under the MIT License.

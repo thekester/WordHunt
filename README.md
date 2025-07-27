@@ -66,9 +66,12 @@ Each script stores its results as a JSON file inside the `data/` directory.
    python robert/robert.py     # Fetch from Le Robert
    ```
 
-4. **Automated Workflows:**
-   - `fetch_dicolink_world_of_the_day.yml` and `fetch_robert_word_of_the_day.yml` run daily via GitHub Actions.
-   - Each workflow commits new JSON files and opens a pull request when fresh words are found.
+4. **Automated Workflow:**
+   - The GitHub Action workflow is set up to run automatically on a daily schedule.
+   - It handles fetching, parsing, and storing new words, as well as creating pull requests when new data is available.
+   - Another workflow automatically merges pull requests with branches named `add-*word-of-the-day` into the `holding` branch every six hours.
+     The workflow uses the `PERSONAL_ACCESS_TOKEN` secret and verifies that the token has the correct permissions before merging.
+    You can also trigger this workflow manually on GitHub or run `scripts/merge_word_of_the_day.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable containing a PAT with `repo` access.
 
 5. **Check the Data:**
    - After the script or workflow runs, check the `data/` directory for JSON files containing the latest word and its definitions.

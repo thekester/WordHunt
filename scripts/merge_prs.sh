@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Merge pull requests with branch names matching 'add-.*word-of-the-day'
-# into the 'holding' branch.
+# Merge pull requests whose head branches match a regex into the holding branch.
+# Defaults: BRANCH_REGEX='^add-' and BASE_BRANCH='holding'.
 # Requires: curl, jq
 
 set -euo pipefail
 
 REPO=${1:-"${GITHUB_REPOSITORY:-}"}
+BRANCH_REGEX=${BRANCH_REGEX:-'^add-'}
+BASE_BRANCH=${BASE_BRANCH:-'holding'}
+
 if [ -z "$REPO" ]; then
   echo "Repository not specified. Pass as first argument or set GITHUB_REPOSITORY." >&2
   exit 1
@@ -17,8 +20,8 @@ if [ -z "${PERSONAL_ACCESS_TOKEN:-}" ]; then
 fi
 
 PRS=$(curl -s -H "Authorization: Bearer $PERSONAL_ACCESS_TOKEN" -H "Accept: application/vnd.github+json" \
-          "https://api.github.com/repos/${REPO}/pulls?state=open&base=holding" | \
-          jq -r '.[] | select(.head.ref | test("add-.*word-of-the-day")) | .number')
+          "https://api.github.com/repos/${REPO}/pulls?state=open&base=${BASE_BRANCH}" | \
+          jq -r --arg regex "$BRANCH_REGEX" '.[] | select(.head.ref | test($regex)) | .number')
 
 if [ -z "$PRS" ]; then
   echo "No matching pull requests found" >&2
@@ -39,3 +42,4 @@ for pr in $PRS; do
   fi
   rm -f /tmp/merge_out
 done
+

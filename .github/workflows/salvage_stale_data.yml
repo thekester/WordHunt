@@ -31,25 +31,32 @@ jobs:
         env:
           HOLDING_BRANCH: 'holding'
         run: |
-          # On part de la branche holding
+          # On repart proprement de la branche holding
           git checkout -B salvage-original origin/${HOLDING_BRANCH}
-
-          # Liste des branches add-* qui ne sont pas main/dev/holding
+      
+          # Liste des branches add-* excluant main/dev/holding
           stale_branches=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/add-* | \
             grep -vE '^(main|dev|holding)$' || true)
-
-          files_copied=0
+      
+          # On extrait successivement le dossier data/ de chaque branche
           for branch in $stale_branches; do
             echo "Traitement de la branche $branch"
-            # Récupère uniquement le dossier data/ de la branche distante
+            # Si un dossier data existe, on le récupère (sinon git checkout échoue et on continue)
             git checkout origin/$branch -- data/ || true
-            # Compte le nombre de fichiers ajoutés pour cette branche
-            added=$(git ls-files --others --exclude-standard data/ | wc -l)
-            files_copied=$((files_copied + added))
           done
-
-          # Si aucun fichier n’a été récupéré, on signale que rien n’a changé
-          echo "files_copied=$files_copied" >> $GITHUB_OUTPUT
+      
+          # On liste tous les fichiers qui diffèrent par rapport à la branche holding
+          changed_files=$(git diff --name-only salvage-original -- data/ || true)
+          new_count=$(echo "$changed_files" | grep -c '.json' || true)
+          
+          if [ "$new_count" -eq 0 ]; then
+            echo "Aucun nouveau fichier JSON à importer."
+          else
+            echo "Fichiers JSON ajoutés ou modifiés :"
+            echo "$changed_files"
+            echo "Total : $new_count fichier(s)"
+          fi
+          echo "files_copied=$new_count" >> $GITHUB_OUTPUT
 
       - name: Commit changes from stale branches
         if: steps.copydata.outputs.files_copied != '0'

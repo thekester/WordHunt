@@ -1,4 +1,4 @@
-name: Auto Merge Word of the Day PRs
+name: Merge add branches
 
 on:
   schedule:
@@ -41,6 +41,6 @@ jobs:
         env:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          BRANCH_REGEX: 'add-.*word-of-the-day'
+          BRANCH_REGEX: '^add-'
         run: |
           scripts/merge_prs.sh

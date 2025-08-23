@@ -49,7 +49,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Step 2: Ensure the holding branch exists and is up-to-date with main
+      # Step 2: Ensure the holding branch exists and is up-to-date locally
+
       - name: Ensure holding branch exists and is up-to-date
         run: |
           # Fetch all remote branches
@@ -60,7 +61,7 @@ jobs:
             echo "Holding branch does not exist. Creating it based on main."
             # Create the holding branch based on main
             git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
-            git push origin ${{ env.HOLDING_BRANCH }}
+
           else
             echo "Holding branch exists. Fetching the latest changes."
             # Checkout holding branch and pull latest changes
@@ -68,18 +69,14 @@ jobs:
             git pull origin ${{ env.HOLDING_BRANCH }}
           fi
 
-      # Ensure holding is up-to-date with main (take theirs)
-      - name: Merge main into holding (use theirs)
-        run: |
+          # Ensure holding is up-to-date with main (take theirs)
+
           echo "Merging main into holding, forcing main’s version (theirs)"
           git merge origin/main \
             --allow-unrelated-histories \
             -s recursive -X theirs \
             -m "Synchronize holding with main (use theirs)" \
           || echo "No conflicts: already up to date"
-
-          # Push any merge commits if necessary
-          git push origin ${{ env.HOLDING_BRANCH }}
 
       # Step Y: Verify presence of data/, dicolink/, and requirements.txt
       - name: Verify Presence of Required Files

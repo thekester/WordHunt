@@ -107,4 +107,12 @@ jobs:
             echo "Push failed, refetching and rebasing before retry $attempt..."
             git fetch origin holding
             git rebase origin/holding || git rebase --abort
+            
+            # Résolution automatique des conflits .yml, main prioritaire
+            if git status --porcelain | grep '\.yml' && [ -d .git/rebase-merge ]; then
+              echo "Conflit sur .yml détecté, on garde la version de main..."
+              git checkout --theirs -- '*.yml'
+              git add '*.yml'
+              git rebase --continue || true
+            fi
           done

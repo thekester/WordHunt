@@ -50,6 +50,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # Step 2: Ensure the holding branch exists and is up-to-date locally
+
       - name: Ensure holding branch exists and is up-to-date
         run: |
           # Fetch all remote branches
@@ -60,6 +61,7 @@ jobs:
             echo "Holding branch does not exist. Creating it based on main."
             # Create the holding branch based on main
             git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
+
           else
             echo "Holding branch exists. Fetching the latest changes."
             # Checkout holding branch and pull latest changes
@@ -68,6 +70,7 @@ jobs:
           fi
 
           # Ensure holding is up-to-date with main (take theirs)
+
           echo "Merging main into holding, forcing main’s version (theirs)"
           git merge origin/main \
             --allow-unrelated-histories \

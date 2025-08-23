@@ -62,12 +62,10 @@ jobs:
       - name: Sync holding branch with the chosen branch
         run: |
           MRB="${MOST_RECENT_BRANCH}"
-
-          # Check if 'holding' exists on remote
+          # Check if the remote 'holding' branch exists
           if git ls-remote --heads origin holding | grep holding; then
             echo "Remote 'holding' branch exists."
-
-            # Check if local 'holding' already exists
+            # Check if a local 'holding' branch already exists
             if git rev-parse --verify holding >/dev/null 2>&1; then
               echo "Local 'holding' branch exists. Checking it out..."
               git checkout holding
@@ -82,10 +80,14 @@ jobs:
             git checkout -b holding origin/$MRB
             git push origin holding
           fi
-
-          echo "Merging $MRB into holding..."
+    
+          echo "Merging $MRB into holding, forcing chosen branch’s changes (use theirs)..."
           git fetch origin $MRB
-          git merge origin/$MRB --allow-unrelated-histories --no-ff -m "Synchronize holding with $MRB"
-
+          git merge origin/$MRB \
+            --allow-unrelated-histories \
+            --no-ff \
+            -s recursive -X theirs \
+            -m "Synchronize holding with $MRB (use theirs)"
+    
           echo "Pushing updated 'holding' branch to origin..."
           git push origin holding

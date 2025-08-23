@@ -68,9 +68,15 @@ jobs:
             git pull origin ${{ env.HOLDING_BRANCH }}
           fi
 
-          # Ensure holding is up-to-date with main
-          echo "Merging main into holding to synchronize."
-          git merge origin/main --no-ff -m "Synchronize holding with main" || echo "Already up to date."
+      # Ensure holding is up-to-date with main (take theirs)
+      - name: Merge main into holding (use theirs)
+        run: |
+          echo "Merging main into holding, forcing main’s version (theirs)"
+          git merge origin/main \
+            --allow-unrelated-histories \
+            -s recursive -X theirs \
+            -m "Synchronize holding with main (use theirs)" \
+          || echo "No conflicts: already up to date"
 
           # Push any merge commits if necessary
           git push origin ${{ env.HOLDING_BRANCH }}

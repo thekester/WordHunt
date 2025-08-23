@@ -16,6 +16,7 @@ on:
 
 jobs:
   fetch_word:
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -19,6 +19,7 @@ on:
 
 jobs:
   pick_and_sync:
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     # Ensure the job itself also has permissions
     permissions:

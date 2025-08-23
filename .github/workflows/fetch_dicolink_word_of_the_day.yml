@@ -52,22 +52,20 @@ jobs:
       # Step 2: Ensure the holding branch exists and is up-to-date locally
       - name: Ensure holding branch exists and is up-to-date
         run: |
-          # Fetch all remote branches
+          # Fetch latest refs without altering local branches
           git fetch origin
 
-          # Check if the holding branch exists
-          if ! git ls-remote --heads origin ${{ env.HOLDING_BRANCH }} | grep ${{ env.HOLDING_BRANCH }}; then
-            echo "Holding branch does not exist. Creating it based on main."
-            # Create the holding branch based on main
-            git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
-          else
-            echo "Holding branch exists. Fetching the latest changes."
-            # Checkout holding branch and pull latest changes
+          if git show-ref --verify --quiet refs/heads/${{ env.HOLDING_BRANCH }}; then
+            # Reset local holding to remote to avoid local divergence
             git checkout ${{ env.HOLDING_BRANCH }}
-            git pull origin ${{ env.HOLDING_BRANCH }}
+            git reset --hard origin/${{ env.HOLDING_BRANCH }}
+          else
+            # Create holding from remote or main if it doesn't exist
+            git checkout -b ${{ env.HOLDING_BRANCH }} origin/${{ env.HOLDING_BRANCH }} 2>/dev/null || \
+            git checkout -b ${{ env.HOLDING_BRANCH }} origin/main
           fi
 
-          # Ensure holding is up-to-date with main (take theirs)
+          # Merge main into holding locally (no push to remote)
           echo "Merging main into holding, forcing main’s version (theirs)"
           git merge origin/main \
             --allow-unrelated-histories \

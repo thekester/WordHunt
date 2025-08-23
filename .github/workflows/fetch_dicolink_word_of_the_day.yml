@@ -171,7 +171,7 @@ jobs:
       - name: Commit changes
         run: |
           git add data/
-          git commit -m "Add word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
+          git commit -m "Add Dicolink word of the day for ${{ env.RAW_DATE }}" || echo "No changes to commit."
 
       # Step 10: Detect if holding has new data compared to main
       - name: Detect new data compared to main
@@ -210,9 +210,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Use PAT with appropriate permissions
-          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
+          commit-message: "Add Dicolink word of the day for ${{ env.RAW_DATE }}"
           branch: add-dicolink-word-of-the-day-${{ env.DATE }}   # Modifié ici
-          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          title: "Add Dicolink word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the Dicolink word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.HOLDING_BRANCH }}
           delete-branch: false  # Do not delete the branch if changes are added
@@ -223,9 +223,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7.0.6
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # Use PAT with appropriate permissions
-          commit-message: "Add word of the day for ${{ env.RAW_DATE }}"
+          commit-message: "Add Dicolink word of the day for ${{ env.RAW_DATE }}"
           branch: add-dicolink-word-of-the-day-${{ env.DATE }}   # Modifié ici
-          title: "Add word of the day for ${{ env.RAW_DATE }}"
+          title: "Add Dicolink word of the day for ${{ env.RAW_DATE }}"
           body: "Automatically added the Dicolink word of the day for **${{ env.RAW_DATE }}**."
           base: ${{ env.BRANCH_NAME || 'main' }}
           delete-branch: true  # Delete the branch after merging

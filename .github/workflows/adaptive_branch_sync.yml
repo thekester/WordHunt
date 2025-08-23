@@ -89,5 +89,19 @@ jobs:
             -s recursive -X theirs \
             -m "Synchronize holding with $MRB (use theirs)"
     
+          echo "Rebasing onto latest remote 'holding' to avoid push races..."
+          git fetch origin holding
+          git rebase origin/holding
+
           echo "Pushing updated 'holding' branch to origin..."
-          git push origin holding
+          attempt=0
+          until git push origin holding --force-with-lease; do
+            attempt=$((attempt+1))
+            if [ $attempt -ge 3 ]; then
+              echo "Failed to push after $attempt attempts."
+              exit 1
+            fi
+            echo "Push failed, refetching and rebasing before retry $attempt..."
+            git fetch origin holding
+            git rebase origin/holding
+          done

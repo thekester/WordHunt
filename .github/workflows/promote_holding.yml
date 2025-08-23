@@ -1,0 +1,49 @@
+name: Promote holding to dev and main
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: 0
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Merge holding into dev
+        run: |
+          set -e
+          git fetch origin holding dev main
+          git checkout dev
+          git merge origin/holding --no-ff -m "Merge holding into dev"
+          git push origin dev
+      - name: Promote dev to main via pull request
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          set -e
+          git fetch origin main
+          if [ -z "$(git rev-list origin/main..origin/dev)" ]; then
+            echo "Main already up to date"
+            exit 0
+          fi
+          pr=$(gh pr list --head dev --base main --state open --json number --jq '.[0].number')
+          if [ -z "$pr" ]; then
+            pr=$(gh pr create --head dev --base main --title "Promote dev to main" --body "Automated promotion from holding")
+          fi
+          gh pr merge "$pr" --merge

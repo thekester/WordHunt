@@ -61,7 +61,14 @@ The following sequence diagram illustrates the workflow for fetching the word of
      The workflow uses the `PERSONAL_ACCESS_TOKEN` secret and verifies that the token has the correct permissions before merging.
     You can also trigger this workflow manually on GitHub or run `scripts/merge_word_of_the_day.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable containing a PAT with `repo` access.
 
-5. **Check the Data:**
+5. **Additional GitHub Actions:**
+   - `Adaptive Branch Sync` keeps the `holding` branch aligned with the most recently updated of `dev` or `main` and avoids push loops.
+   - `Promote holding to dev and main` merges `holding` into `dev` and opens a pull request from `dev` to `main` on a daily schedule or after relevant PR merges.
+   - `Delete merged add branches` cleans up `add-*` branches once their pull requests are merged.
+   - `Delete old branches` prunes any branches older than three days, skipping `main`, `dev`, and `holding`.
+   - Dedicated fetch workflows for Dicolink and Robert words of the day create properly named branches and pull requests while guarding against self-triggered runs.
+
+6. **Check the Data:**
    - After the script or workflow runs, check the `data/` directory for JSON files containing the latest word and its definitions.
 
 ## Contributing

@@ -1,1 +1,110 @@
+# File: .github/workflows/adaptive_branch_sync.yml
 
+name: Adaptive Branch Sync
+
+########################################
+# Permissions (so we can push commits)
+########################################
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # optional daily schedule
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  pick_and_sync:
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    # Ensure the job itself also has permissions
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Check out the repository using your PAT, so pushes won't get 403
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      # 2. Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 3. Determine which branch is most recently updated (dev or main)
+      - name: Determine which branch is more recent
+        id: pick_branch
+        run: |
+          git fetch origin dev main
+          DEVMOD=$(git log -1 --format="%ct" origin/dev || echo 0)
+          MAINMOD=$(git log -1 --format="%ct" origin/main || echo 0)
+
+          echo "Last commit timestamp on dev  : $DEVMOD"
+          echo "Last commit timestamp on main : $MAINMOD"
+
+          if [ "$DEVMOD" -gt "$MAINMOD" ]; then
+            echo "MOST_RECENT_BRANCH=dev" >> $GITHUB_ENV
+            echo "Most recent branch is dev"
+          else
+            echo "MOST_RECENT_BRANCH=main" >> $GITHUB_ENV
+            echo "Most recent branch is main"
+          fi
+
+      # 4. Sync the 'holding' branch with the chosen branch
+      - name: Sync holding branch with the chosen branch
+        run: |
+          MRB="${MOST_RECENT_BRANCH}"
+          # Check if the remote 'holding' branch exists
+          if git ls-remote --heads origin holding | grep holding; then
+            echo "Remote 'holding' branch exists."
+            # Check if a local 'holding' branch already exists
+            if git rev-parse --verify holding >/dev/null 2>&1; then
+              echo "Local 'holding' branch exists. Checking it out..."
+              git checkout holding
+              git pull origin holding
+            else
+              echo "Local 'holding' branch does NOT exist yet. Creating it from remote..."
+              git fetch origin holding:refs/remotes/origin/holding
+              git checkout -b holding origin/holding
+            fi
+          else
+            echo "Remote 'holding' branch does NOT exist. Creating it from $MRB..."
+            git checkout -b holding origin/$MRB
+            git push origin holding
+          fi
+    
+          echo "Merging $MRB into holding, forcing chosen branch’s changes (use theirs)..."
+          git fetch origin $MRB
+          git merge origin/$MRB \
+            --allow-unrelated-histories \
+            --no-ff \
+            -s recursive -X theirs \
+            -m "Synchronize holding with $MRB (use theirs)"
+    
+          echo "Rebasing onto latest remote 'holding' to avoid push races..."
+          git fetch origin holding
+          git rebase origin/holding
+
+          echo "Pushing updated 'holding' branch to origin..."
+          for attempt in 1 2 3; do
+            if git push origin holding --force-with-lease; then
+              echo "Push succeeded."
+              break
+            fi
+            if [ $attempt -eq 3 ]; then
+              echo "Failed to push after $attempt attempts."
+              exit 1
+            fi
+            echo "Push failed, refetching and rebasing before retry $attempt..."
+            git fetch origin holding
+            git rebase origin/holding || git rebase --abort
+          done

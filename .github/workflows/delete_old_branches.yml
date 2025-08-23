@@ -1,1 +1,48 @@
 
+# .github/workflows/delete_old_branches.yml
+name: Delete old branches
+
+on:
+  schedule:
+    - cron: '0 0 * * *'    # exécution quotidienne
+  workflow_dispatch:        # permet un lancement manuel
+
+permissions:
+  contents: write
+
+jobs:
+  prune-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete remote branches older than 3 days
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          script: |
+            const thresholdDays = 3;
+            const exempt = ['main','dev','holding'];
+            const now = new Date();
+            const {data: branches} = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              protected: false
+            });
+            for (const branch of branches) {
+              const name = branch.name;
+              if (exempt.includes(name)) continue;
+              const {data: commit} = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: branch.commit.sha
+              });
+              const commitDate = new Date(commit.commit.committer.date);
+              const ageDays = (now - commitDate) / (1000 * 60 * 60 * 24);
+              if (ageDays > thresholdDays) {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${name}`
+                });
+                console.log(`Deleted branch ${name} (last commit ${ageDays.toFixed(1)} days ago)`);
+              }
+            }

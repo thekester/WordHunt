@@ -31,8 +31,10 @@ jobs:
         env:
           HOLDING_BRANCH: 'holding'
         run: |
-          # On repart proprement de la branche holding
-          git checkout -B salvage-original origin/${HOLDING_BRANCH}
+          # Synchroniser la branche locale holding avec la distante
+          git fetch origin
+          git checkout ${HOLDING_BRANCH}
+          git reset --hard origin/${HOLDING_BRANCH}
       
           # Liste des branches add-* excluant main/dev/holding
           stale_branches=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/add-* | \
@@ -40,15 +42,15 @@ jobs:
       
           # On extrait successivement le dossier data/ de chaque branche
           for branch in $stale_branches; do
-            echo "Traitement de la branche $branch"
-            # Si un dossier data existe, on le récupère (sinon git checkout échoue et on continue)
+            # (facultatif) afficher la branche en cours de traitement
+            # echo "Traitement de la branche $branch"
             git checkout origin/$branch -- data/ || true
           done
       
-          # On liste tous les fichiers qui diffèrent par rapport à la branche holding
-          changed_files=$(git diff --name-only salvage-original -- data/ || true)
+          # Déterminer les fichiers ajoutés ou modifiés par rapport à origin/holding
+          changed_files=$(git diff --name-only origin/${HOLDING_BRANCH} -- data/ || true)
           new_count=$(echo "$changed_files" | grep -c '.json' || true)
-          
+      
           if [ "$new_count" -eq 0 ]; then
             echo "Aucun nouveau fichier JSON à importer."
           else
@@ -56,7 +58,10 @@ jobs:
             echo "$changed_files"
             echo "Total : $new_count fichier(s)"
           fi
+      
+          # Exporter la valeur pour les étapes suivantes
           echo "files_copied=$new_count" >> $GITHUB_OUTPUT
+
 
       - name: Commit changes from stale branches
         if: steps.copydata.outputs.files_copied != '0'

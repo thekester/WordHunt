@@ -57,9 +57,9 @@ The following sequence diagram illustrates the workflow for fetching the word of
 4. **Automated Workflow:**
    - The GitHub Action workflow is set up to run automatically on a daily schedule.
    - It handles fetching, parsing, and storing new words, as well as creating pull requests when new data is available.
-   - Another workflow automatically merges pull requests with branches named `add-*word-of-the-day` into the `holding` branch every six hours.
-     The workflow uses the `PERSONAL_ACCESS_TOKEN` secret and verifies that the token has the correct permissions before merging.
-    You can also trigger this workflow manually on GitHub or run `scripts/merge_word_of_the_day.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable containing a PAT with `repo` access.
+   - Workflows automatically merge pull requests from branches starting with `add-` into the `holding` branch every six hours.
+     They use the `PERSONAL_ACCESS_TOKEN` secret and verify that the token has the correct permissions before merging.
+     You can trigger the merge manually on GitHub or run `scripts/merge_prs.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable with `repo` access and can be scoped using `BRANCH_REGEX`.
 
 5. **Additional GitHub Actions:**
    - `Adaptive Branch Sync` keeps the `holding` branch aligned with the most recently updated of `dev` or `main` and avoids push loops.

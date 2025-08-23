@@ -47,22 +47,21 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           
-      # Ensure the holding branch exists and is up-to-date (use theirs)
+      # Ensure the holding branch exists and is up-to-date locally
       - name: Ensure holding branch exists and is up-to-date
         run: |
           git fetch origin
-    
+
           # If holding doesn’t exist remotely, create it from main
           if ! git ls-remote --heads origin "${{ env.HOLDING_BRANCH }}" | grep "${{ env.HOLDING_BRANCH }}"; then
             echo "Holding branch does not exist. Creating it based on main."
             git checkout -b "${{ env.HOLDING_BRANCH }}" origin/main
-            git push origin "${{ env.HOLDING_BRANCH }}"
           else
             echo "Holding branch exists. Fetching the latest changes."
             git checkout "${{ env.HOLDING_BRANCH }}"
             git pull origin "${{ env.HOLDING_BRANCH }}"
           fi
-    
+
           echo "Merging main into holding, forcing main’s version (theirs)..."
           git merge origin/main \
             --allow-unrelated-histories \
@@ -70,8 +69,6 @@ jobs:
             -s recursive -X theirs \
             -m "Synchronize holding with main (use theirs)" \
           || echo "No conflicts: already up to date"
-    
-          git push origin "${{ env.HOLDING_BRANCH }}"
 
       - name: Verify Presence of Required Files
         run: |

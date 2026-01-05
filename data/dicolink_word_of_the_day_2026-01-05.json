@@ -1,0 +1,37 @@
+{
+    "word_of_the_day": "Concaténation",
+    "date": "January 05, 2026",
+    "source_url": "https://www.dicolink.com/motdujour",
+    "definitions": [
+        {
+            "source": "Grand Dictionnaire de la langue française numérisé",
+            "definitions": [
+                "n.f. Enchaînement des idées entre elles, des faits entre eux suivant la causalité.",
+                "n.f. Dans certains langages de programmation, enchaînement de deux listes ou de deux chaînes de caractères mises bout à bout.",
+                "n.f. Juxtaposition et enchaînement d'unités linguistiques dans un ordre donné."
+            ]
+        },
+        {
+            "source": "Portail internet \"Le Dictionnaire\"",
+            "definitions": [
+                "n.  Liaison et association d’idées suivant leur causalité.",
+                "n.  (Programmation informatique) Action de concaténer, de réunir bout à bout deux chaines de caractères."
+            ]
+        },
+        {
+            "source": "Le littré",
+            "definitions": [
+                "Sens 1:  Terme de philosophie. Enchaînement de plusieurs choses ensemble.",
+                "Sens 2:  Terme de grammaire. Mot proposé par Beauzée pour cette gradation où un mot se répète d'un membre dans le suivant, et les enchaîne ainsi les uns aux autres : Tout renaissait pour s'embellir ; tout s'embellissait pour plaire."
+            ]
+        },
+        {
+            "source": "Wiktionnaire",
+            "definitions": [
+                "Liaison et association d’idées suivant leur causalité.",
+                "(Programmation) Action de concaténer, de réunir bout à bout deux chaînes de caractères.",
+                "(Rhétorique) Figure de style formée par la répétition d’anadiploses."
+            ]
+        }
+    ]
+}

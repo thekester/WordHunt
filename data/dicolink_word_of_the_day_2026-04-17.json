@@ -1,0 +1,29 @@
+{
+    "word_of_the_day": "Sémaphore",
+    "date": "April 17, 2026",
+    "source_url": "https://www.dicolink.com/motdujour",
+    "definitions": [
+        {
+            "source": "Grand Dictionnaire de la langue française numérisé",
+            "definitions": [
+                "n.m. Poste de signalisation établi sur une côte pour communiquer avec les navires en vue.",
+                "n.m. Signal d'arrêt d'espacement des trains (block), constitué en signalisation mécanique par une aile rouge étendue horizontalement, associée de nuit à un feu rouge, et en signalisation lumineuse par un feu rouge."
+            ]
+        },
+        {
+            "source": "Portail internet \"Le Dictionnaire\"",
+            "definitions": [
+                "n.  (Marine) Sorte de télégraphe optique établi sur les côtes, pour servir à faire connaître l’arrivée, les manœuvres des bâtiments venant du large, pour correspondre avec eux et leur fournir diverses indications utiles pour la navigation.",
+                "n.  (Chemin de fer) Système de signalisation ferroviaire mécanique disposée en hauteur, indiquant que le canton suivant est occupé par un train quand l’aile du sémaphore est visible ; cela sous la responsabilité d’un cantonnier.",
+                "n.  (Chemin de fer) (Par extension) Système de signalisation ferroviaire lumineux, sans pièce mobile, de même fonction que le précédent.",
+                "n.  (Programmation informatique) Dispositif de verrouillage de ressource, permettant l'exclusion mutuelle."
+            ]
+        },
+        {
+            "source": "Le littré",
+            "definitions": [
+                "Sorte de télégraphe établi sur les côtes, pour servir à faire connaître l'arrivée, les manœuvres des bâtiments venant du large, naviguant ou croisant à la vue des côtes et devant les ports."
+            ]
+        }
+    ]
+}

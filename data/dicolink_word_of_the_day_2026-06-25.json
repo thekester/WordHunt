@@ -1,0 +1,27 @@
+{
+    "word_of_the_day": "Réifier",
+    "date": "June 25, 2026",
+    "source_url": "https://www.dicolink.com/motdujour",
+    "definitions": [
+        {
+            "source": "Grand Dictionnaire de la langue française numérisé",
+            "definitions": [
+                "v. tr. Opérer la réification."
+            ]
+        },
+        {
+            "source": "Portail internet \"Le Dictionnaire\"",
+            "definitions": [
+                "v.  (Philosophie) Transformer en chose à partir de sa subjectivité.",
+                "v.  (Informatique) Transformer un concept en un objet informatique, au sens utilisé dans la programmation orientée objet, ou en un triplet, dans un contexte RDF."
+            ]
+        },
+        {
+            "source": "Wiktionnaire",
+            "definitions": [
+                "(Philosophie) Transformer en chose une réalité immatérielle.",
+                "(Informatique) Transformer un concept en un objet informatique, au sens utilisé dans la programmation orientée objet, ou en un triplet, dans un contexte RDF."
+            ]
+        }
+    ]
+}

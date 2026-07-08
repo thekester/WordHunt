@@ -1,0 +1,25 @@
+{
+    "word_of_the_day": "Palindrome",
+    "date": "July 07, 2026",
+    "source_url": "https://www.dicolink.com/motdujour",
+    "definitions": [
+        {
+            "source": "Grand Dictionnaire de la langue française numérisé",
+            "definitions": [
+                "n.m. Se dit d'un mot, d'un vers, d'une phrase que l'on peut lire indifféremment de gauche à droite ou de droite à gauche. (Exemple : le mot ressasser ou la phrase Ésope reste ici et se repose.)"
+            ]
+        },
+        {
+            "source": "Portail internet \"Le Dictionnaire\"",
+            "definitions": [
+                "n.  Texte dont la succession des lettres ou des chiffres est la même quand on le parcourt de gauche à droite ou de droite à gauche."
+            ]
+        },
+        {
+            "source": "Le littré",
+            "definitions": [
+                "adj. Vers, phrase palindrome, vers, phrase offrant le même sens quand on les lit de gauche à droite ou de droite à gauche."
+            ]
+        }
+    ]
+}

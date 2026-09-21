@@ -1,78 +1,104 @@
 # WordHunt
-**WordHunt:** Discover a new word, every single day!
 
-WordHunt scrapes a French dictionary website to bring you a daily word along with its definitions. The project automates the process of fetching, parsing, and storing word data so that you can explore new vocabulary effortlessly.
+Discover a French word every day, with definitions from Dicolink and Le Robert.
+Records are stored in `data/<source>_word_of_the_day_YYYY-MM-DD.json`.
 
-## Data Source
-- **Primary Source:** [Dicolink](https://www.dicolink.com/api)  
-  Currently, there is no official API available for Dicolink, so WordHunt uses web scraping to retrieve the word of the day.
+## Run locally
 
-## Sequence Diagram
-The following sequence diagram illustrates the workflow for fetching the word of the day using our automation:
+Requires Python 3.9+ (GitHub Actions uses 3.12).
 
-![Sequence Diagram](images/sequencediagramDicolink.png)
+```bash
+git clone https://github.com/thekester/WordHunt.git
+cd WordHunt
+python -m pip install -r requirements.txt
+python dicolink/dicolink.py
+python robert/robert.py
+python -m unittest discover -s tests -v
+```
 
-## How It Works
-1. **Workflow Trigger:**  
-   The process is initiated daily via GitHub Actions (or can be manually triggered), which starts the automated workflow.
+Scripts work from any directory and default to this repository's `data/` folder.
+To select an output directory:
 
-2. **Repository Setup:**  
-   - The workflow checks out the repository.
-   - It ensures that a dedicated `holding` branch exists and is synchronized with the `main` branch.
-   - Required files and environment are verified and set up, including installing Python dependencies.
+```bash
+python scripts/fetch_word.py dicolink --output-dir /tmp/wordhunt-data
+```
 
-3. **Scraping Process:**  
-   - A Python script sends a request to the Dicolink website.
-   - It parses the HTML content to extract the word of the day, its definitions, and the corresponding date.
-   - The script then saves this data as a JSON file in the `data/` directory.
+Dicolink's publication date is read from the page (including its `span.date`).
+Robert's collector resolves the daily-word card on the home page, then reads the
+linked dictionary entry. Its collection date uses Europe/Paris time. New records
+use ISO dates; legacy English dates remain readable. The existing JSON structure
+is retained: Dicolink groups definitions by source, Robert uses a list of strings.
 
-4. **Data Handling and PR Creation:**  
-   - After scraping, the workflow commits any new data to the `holding` branch.
-   - It compares the latest data against the `main` branch.  
-   - If new data is detected, a Pull Request is automatically created for review and merging.
+Missing words, missing definitions, unrecognized source dates, HTTP errors and
+suggestion pages fail the run before a data pull request is created. HTTP requests
+have timeouts and bounded retries for transient errors. A valid existing record
+is preserved; a different word for the same date is reported as a conflict.
+Invalid existing records can be repaired with a newly validated result.
 
-5. **Outcome:**  
-   - Users receive a fresh word of the day.
-   - The data is stored and versioned within the repository for future reference.
+## Automation
 
-## Setup & Usage
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/WordHunt.git
-   cd WordHunt
-   ```
+The `holding → dev → main` branch flow is retained:
 
-2. **Install Dependencies:**
-   Ensure you have Python 3.9 or higher installed, then run:
-   ```bash
-   pip install -r requirements.txt
-   ```
+| Workflow | Schedule (UTC) | Behavior |
+| --- | --- | --- |
+| Sync main into holding | 06:30 | Normal merge; conflicts fail visibly, no force push |
+| Fetch Dicolink | 07:00 | Validate a record and open a dated PR into holding |
+| Fetch Robert | 08:00 | Validate a record and open a dated PR into holding |
+| Merge daily data branches | 08:15, 09:15, 12:15, 18:15 | Validate same-repository PR contents and merge the exact checked head |
+| Promote holding | 09:30 | Merge into dev, then promote through a PR into main |
+| Delete old merged data branches | 03:30 | Only old daily-data branches whose commits are already in main and which have no open PR |
 
-3. **Run the Scraping Script:**
-   You can manually run the script to fetch the current word of the day:
-   ```bash
-   python dicolink/dicolink.py
-   ```
+All these workflows also support manual dispatch. Fetches always run the code
+from main and submit only the freshly collected file to holding. They preserve
+valid existing holding records, and manual and scheduled runs use the same base.
+Maintenance workflows share a concurrency group. Collection and maintenance do
+not trigger on every push or PR closure, preventing recursive PAT-triggered runs.
+Normal pushes fail on concurrent remote changes; rerun after resolving any conflict.
 
-4. **Automated Workflow:**
-   - The GitHub Action workflow is set up to run automatically on a daily schedule.
-   - It handles fetching, parsing, and storing new words, as well as creating pull requests when new data is available.
-   - Workflows automatically merge pull requests from branches starting with `add-` into the `holding` branch every six hours.
-     They use the `PERSONAL_ACCESS_TOKEN` secret and verify that the token has the correct permissions before merging.
-     You can trigger the merge manually on GitHub or run `scripts/merge_prs.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable with `repo` access and can be scoped using `BRANCH_REGEX`.
+Workflows prefer `PERSONAL_ACCESS_TOKEN` when configured and otherwise use
+`GITHUB_TOKEN`. The token needs repository contents and pull-request write access,
+and repository Actions settings must allow pull-request creation. Branch rules
+still apply. A PAT is needed if automatic writes must trigger further workflows;
+`GITHUB_TOKEN` writes do not trigger most subsequent Actions events. The scheduled
+maintenance jobs still run independently.
 
-5. **Additional GitHub Actions:**
-   - `Adaptive Branch Sync` keeps the `holding` branch aligned with the most recently updated of `dev` or `main` and avoids push loops.
-   - `Promote holding to dev and main` merges `holding` into `dev` and opens a pull request from `dev` to `main` on a daily schedule or after relevant PR merges.
-   - `Delete merged add branches` cleans up `add-*` branches once their pull requests are merged.
-   - `Delete old branches` prunes any branches older than three days, skipping `main`, `dev`, and `holding`.
-   - Dedicated fetch workflows for Dicolink and Robert words of the day create properly named branches and pull requests while guarding against self-triggered runs.
+To run the same guarded auto-merge locally, after installing requirements:
 
-6. **Check the Data:**
-   - After the script or workflow runs, check the `data/` directory for JSON files containing the latest word and its definitions.
+```bash
+GH_TOKEN=... bash scripts/merge_prs.sh thekester/WordHunt
+```
 
-## Contributing
-Contributions are welcome! If you have ideas for improvements or encounter issues, please open an issue or submit a pull request.
+Only non-draft PRs from this repository with an
+`add-(dicolink|robert)-word-of-the-day-*` branch, targeting holding, and changing
+exactly one valid daily JSON file qualify. The source and date must match the
+filename. API errors or refused merges make the job fail. Unrelated PRs are skipped.
 
-## License
-This project is licensed under the MIT License.
+The manually dispatched salvage workflow opens a review PR into main. It only
+recovers missing, valid records from daily-data branches; it never overwrites
+existing archives or silently imports malformed results.
+
+## Historical data quality
+
+The September 2026 audit found that all 601 Robert records present in main at
+commit `f0fb494` contain suggestion-page text instead of a genuine daily word.
+They are retained for traceability, **not valid vocabulary data**. The old endpoint
+`/mot-du-jour` must not be used to infer their original words. Their true historical
+contents cannot be reconstructed from those files alone.
+
+One empty Dicolink definition in the May 15, 2026 record has been removed while
+preserving all meaningful definitions. To inspect the remaining invalid archives:
+
+```bash
+python scripts/audit_data.py
+```
+
+The audit prints offending filenames/reasons and exits nonzero when any are found.
+CI validates changed data separately so historical corruption does not mask a new
+regression. Robert's new parsing is covered by synthetic fixtures; a live
+end-to-end verification remains necessary because this development environment
+received HTTP 403 from Le Robert. It now fails visibly instead of saving false data.
+
+## Contributing and license
+
+Bug reports and pull requests are welcome. Code is licensed under the MIT License.
+Dictionary content remains attributable to the respective sources.

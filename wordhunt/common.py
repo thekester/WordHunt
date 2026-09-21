@@ -31,13 +31,24 @@ def parse_date(value):
         raise ValueError(f'Unrecognized source date: {value!r}')
 
 
+def fetch_json(url, params=None):
+    retries = Retry(total=2, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504),
+                    allowed_methods=('GET',))
+    with requests.Session() as session:
+        session.mount('https://', HTTPAdapter(max_retries=retries))
+        response = session.get(url, params=params, timeout=(10, 30),
+                               headers={'User-Agent': 'WordHunt/2.0 (+https://github.com/thekester/WordHunt)'})
+        response.raise_for_status()
+        return response.json()
+
+
 def fetch_page(url):
     retries = Retry(total=2, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504),
                     allowed_methods=('GET',))
     with requests.Session() as session:
         session.mount('https://', HTTPAdapter(max_retries=retries))
         response = session.get(url, timeout=(10, 30),
-                               headers={'User-Agent': 'WordHunt/1.0 (daily dictionary collector)'})
+                               headers={'User-Agent': 'WordHunt/2.0 (+https://github.com/thekester/WordHunt)'})
         response.raise_for_status()
         return response.content
 

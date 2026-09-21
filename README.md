@@ -1,78 +1,63 @@
 # WordHunt
-**WordHunt:** Discover a new word, every single day!
 
-WordHunt scrapes a French dictionary website to bring you a daily word along with its definitions. The project automates the process of fetching, parsing, and storing word data so that you can explore new vocabulary effortlessly.
+WordHunt archives several French words of the day with their definitions in
+`data/<source>_word_of_the_day_YYYY-MM-DD.json`.
 
-## Data Source
-- **Primary Source:** [Dicolink](https://www.dicolink.com/api)  
-  Currently, there is no official API available for Dicolink, so WordHunt uses web scraping to retrieve the word of the day.
+## Sources
 
-## Sequence Diagram
-The following sequence diagram illustrates the workflow for fetching the word of the day using our automation:
+| Source | Collection method | Content |
+| --- | --- | --- |
+| [Dicolink](https://www.dicolink.com/motdujour) | Page parsing | French definitions grouped by dictionary source |
+| [FrenchDictionary.com](https://www.frenchdictionary.com/wordoftheday) | Card explicitly labelled `TODAY` | French word, English meaning and an example |
+| [Wiktionnaire](https://fr.wiktionary.org/wiki/Wiktionnaire:Mot_du_jour) | MediaWiki API and its curated calendar | French word and definitions from its French entry |
 
-![Sequence Diagram](images/sequencediagramDicolink.png)
+Each collector validates the word, date and non-empty definitions before writing.
+A source can fail or not have a published entry that day; the daily job records a
+warning and continues with the other sources. It never stores placeholders or
+empty data.
 
-## How It Works
-1. **Workflow Trigger:**  
-   The process is initiated daily via GitHub Actions (or can be manually triggered), which starts the automated workflow.
+## Run locally
 
-2. **Repository Setup:**  
-   - The workflow checks out the repository.
-   - It ensures that a dedicated `holding` branch exists and is synchronized with the `main` branch.
-   - Required files and environment are verified and set up, including installing Python dependencies.
+```bash
+python -m pip install -r requirements.txt
+python scripts/fetch_word.py dicolink --output-dir /tmp/wordhunt
+python scripts/fetch_word.py frenchdictionary --output-dir /tmp/wordhunt
+python scripts/fetch_word.py wiktionary --output-dir /tmp/wordhunt
+python -m unittest discover -s tests -v
+python scripts/audit_data.py
+```
 
-3. **Scraping Process:**  
-   - A Python script sends a request to the Dicolink website.
-   - It parses the HTML content to extract the word of the day, its definitions, and the corresponding date.
-   - The script then saves this data as a JSON file in the `data/` directory.
+The collectors use bounded HTTP retries and connection/read timeouts. JSON writes
+are atomic. A valid record that already exists on the target branch is preserved;
+a different valid word for the same source/date stops the run for review.
 
-4. **Data Handling and PR Creation:**  
-   - After scraping, the workflow commits any new data to the `holding` branch.
-   - It compares the latest data against the `main` branch.  
-   - If new data is detected, a Pull Request is automatically created for review and merging.
+## Daily publication
 
-5. **Outcome:**  
-   - Users receive a fresh word of the day.
-   - The data is stored and versioned within the repository for future reference.
+The `Daily word collection` workflow runs at **06:20 UTC** and can be started
+manually. It fetches each source independently, commits every new validated
+record to `dev`, pushes `dev`, then creates or updates the `dev → main` pull
+request. It asks GitHub to auto-merge that pull request once repository rules and
+checks allow it. If auto-merge is disabled, the merge request remains open and is
+updated by the next daily collection.
 
-## Setup & Usage
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/WordHunt.git
-   cd WordHunt
-   ```
+Set `PERSONAL_ACCESS_TOKEN` with `contents: write` and `pull-requests: write` if
+workflow-generated commits must trigger subsequent workflows. Without it, the
+workflow falls back to `GITHUB_TOKEN`; the daily schedule still performs the next
+cycle. The repository must allow GitHub Actions to create pull requests and allow
+auto-merge if automatic final merging is desired.
 
-2. **Install Dependencies:**
-   Ensure you have Python 3.9 or higher installed, then run:
-   ```bash
-   pip install -r requirements.txt
-   ```
+CI runs the tests and validates the complete active archive on every relevant
+push and pull request. Each active filename must encode its declared source and
+ISO publication date.
 
-3. **Run the Scraping Script:**
-   You can manually run the script to fetch the current word of the day:
-   ```bash
-   python dicolink/dicolink.py
-   ```
+## Archive correction
 
-4. **Automated Workflow:**
-   - The GitHub Action workflow is set up to run automatically on a daily schedule.
-   - It handles fetching, parsing, and storing new words, as well as creating pull requests when new data is available.
-   - Workflows automatically merge pull requests from branches starting with `add-` into the `holding` branch every six hours.
-     They use the `PERSONAL_ACCESS_TOKEN` secret and verify that the token has the correct permissions before merging.
-     You can trigger the merge manually on GitHub or run `scripts/merge_prs.sh` locally. The script expects a `PERSONAL_ACCESS_TOKEN` environment variable with `repo` access and can be scoped using `BRANCH_REGEX`.
-
-5. **Additional GitHub Actions:**
-   - `Adaptive Branch Sync` keeps the `holding` branch aligned with the most recently updated of `dev` or `main` and avoids push loops.
-   - `Promote holding to dev and main` merges `holding` into `dev` and opens a pull request from `dev` to `main` on a daily schedule or after relevant PR merges.
-   - `Delete merged add branches` cleans up `add-*` branches once their pull requests are merged.
-   - `Delete old branches` prunes any branches older than three days, skipping `main`, `dev`, and `holding`.
-   - Dedicated fetch workflows for Dicolink and Robert words of the day create properly named branches and pull requests while guarding against self-triggered runs.
-
-6. **Check the Data:**
-   - After the script or workflow runs, check the `data/` directory for JSON files containing the latest word and its definitions.
-
-## Contributing
-Contributions are welcome! If you have ideas for improvements or encounter issues, please open an issue or submit a pull request.
+The 601 `robert_*` files were removed from the active archive because they stored
+a Le Robert suggestion page rather than a daily word. They remain recoverable in
+git history, but are not usable dictionary records. Le Robert currently returns
+HTTP 403 to automated requests, so it is intentionally not an active collector.
+The Dicolink record for 2026-05-15 was repaired by removing its empty definition.
 
 ## License
-This project is licensed under the MIT License.
+
+The code is MIT licensed. Dictionary content remains attributable to its source.

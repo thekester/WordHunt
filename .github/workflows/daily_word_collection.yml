@@ -57,6 +57,7 @@ jobs:
           git fetch origin dev main
           if git show-ref --verify --quiet refs/remotes/origin/dev; then
             git checkout -B dev origin/dev
+            git merge --no-edit origin/main
           else
             git checkout -b dev origin/main
           fi

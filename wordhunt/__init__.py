@@ -1,0 +1,1 @@
+"""Validated daily dictionary collection."""

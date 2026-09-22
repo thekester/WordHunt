@@ -1,0 +1,86 @@
+name: Daily word collection
+
+on:
+  schedule:
+    - cron: '20 6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/daily_word_collection.yml']
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-word-collection
+  cancel-in-progress: false
+
+jobs:
+  collect-and-propose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN || github.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Fetch each source independently
+        env:
+          OUTPUT_DIR: ${{ runner.temp }}/wordhunt
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          successful=0
+          for source in dicolink frenchdictionary wiktionary; do
+            if python scripts/fetch_word.py "$source" --base-ref origin/dev --output-dir "$OUTPUT_DIR"; then
+              successful=$((successful + 1))
+            else
+              echo "::warning title=Source unavailable::$source did not yield a valid record; no false data was saved."
+            fi
+          done
+          if [ "$successful" -eq 0 ]; then
+            echo 'No source yielded a valid record.' >&2
+            exit 1
+          fi
+      - name: Commit validated records to dev
+        env:
+          OUTPUT_DIR: ${{ runner.temp }}/wordhunt
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin dev main
+          if git show-ref --verify --quiet refs/remotes/origin/dev; then
+            git checkout -B dev origin/dev
+            git merge --no-edit origin/main
+          else
+            git checkout -b dev origin/main
+          fi
+          git rm -f --ignore-unmatch data/robert_word_of_the_day_*.json
+          cp "$OUTPUT_DIR"/*.json data/
+          git add data/
+          if git diff --cached --quiet; then
+            echo 'All valid records are already present.'
+            exit 0
+          fi
+          git commit -m "Collect validated daily words $(TZ=Europe/Paris date +%F)"
+          git push origin dev
+      - name: Create or update the daily merge request
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || github.token }}
+        run: |
+          git fetch origin main dev
+          if git diff --quiet origin/main origin/dev; then
+            exit 0
+          fi
+          pr=$(gh pr list --head dev --base main --state open --json number --jq '.[0].number')
+          if [ -z "$pr" ]; then
+            pr=$(gh pr create --head dev --base main --title 'Daily validated words' --body 'Automated daily collection. Every added record passed local validation before this pull request was updated.')
+          fi
+          echo "Daily merge request: $pr"
+          gh pr merge "$pr" --auto --merge || echo 'Auto-merge is unavailable; the open merge request remains ready for review.'

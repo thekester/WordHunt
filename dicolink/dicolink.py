@@ -1,92 +1,46 @@
-import requests
-from bs4 import BeautifulSoup
-import json
-import os
-from datetime import datetime
-import logging
+"""Fetch Dicolink's dated word without performing I/O on import."""
 import sys
+from pathlib import Path
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Keep `python dicolink/dicolink.py` usable from any working directory.
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# Target URL
-url = "https://www.dicolink.com/motdujour"
-source_name = "dicolink"  # Name of the source
+from bs4 import BeautifulSoup
+from wordhunt.common import fetch_page, parse_date, save_data, validate
 
-try:
-    # Fetch the HTML content of the page
-    response = requests.get(url)
-    response.raise_for_status()
-except requests.exceptions.RequestException as e:
-    logger.error(f"Error fetching {url}: {e}")
-    sys.exit(1)
+URL = 'https://www.dicolink.com/motdujour'
 
-soup = BeautifulSoup(response.content, 'html.parser')
 
-# Extract the word of the day
-word_element = soup.find('h1')
-word_of_the_day = word_element.text.strip() if word_element else "Unknown"
+def parse_content(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    heading = soup.find('h1')
+    date_element = soup.select_one('.date')
+    if heading is None or date_element is None:
+        raise ValueError('Dicolink word or publication date missing')
+    definitions = []
+    for section in soup.select('.module-definitions'):
+        for source in section.select('h3.source'):
+            items = []
+            # Do not zip unrelated lists: a source may have no definitions.
+            for sibling in source.next_siblings:
+                if getattr(sibling, 'name', None) == 'h3':
+                    break
+                if getattr(sibling, 'name', None) == 'ul':
+                    items.extend(li.get_text(' ', strip=True) for li in sibling.find_all('li'))
+            items = [text for text in items if text and text.casefold().rstrip('. ') != 'pas de définition']
+            if items:
+                definitions.append({'source': source.get_text(' ', strip=True), 'definitions': items})
+    data = {'word_of_the_day': heading.get_text(' ', strip=True),
+            'date': parse_date(date_element.get_text(' ', strip=True)).isoformat(),
+            'source_url': URL, 'definitions': definitions}
+    validate(data)
+    return data
 
-# Extract the definitions
-definitions_section = soup.find('div', {'class': 'word-module module-definitions'})
-definitions = []
-if definitions_section:
-    sources = definitions_section.find_all('h3', {'class': 'source'})
-    definition_lists = definitions_section.find_all('ul')
 
-    for source, definitions_list in zip(sources, definition_lists):
-        source_text = source.text.strip()
-        definition_items = [li.text.strip() for li in definitions_list.find_all('li')]
+def scrape(data_dir=None):
+    return save_data('dicolink', parse_content(fetch_page(URL)), data_dir)
 
-        # Exclude sources without definitions or with "pas de définition"
-        if not any(def_item.lower() != "pas de définition" for def_item in definition_items):
-            continue  # Skip this source
 
-        # Filter out "pas de définition" if other definitions exist
-        filtered_definitions = [def_item for def_item in definition_items if def_item.lower() != "pas de définition"]
-
-        if filtered_definitions:
-            definitions.append({
-                "source": source_text,
-                "definitions": filtered_definitions
-            })
-
-# Extract the date (if available)
-# Assume the date is present in a tag with the class 'date' in the sidebar
-date_element = soup.find('div', {'class': 'date'})
-date_of_the_day = date_element.text.strip() if date_element else datetime.now().strftime("%B %d, %Y")
-
-# Structure the data
-data = {
-    "word_of_the_day": word_of_the_day,
-    "date": date_of_the_day,
-    "source_url": url,
-    "definitions": definitions
-}
-
-# Optional: Display the data
-print(json.dumps(data, indent=4, ensure_ascii=False))
-
-# Save the data to a JSON file
-# Create a 'data' folder if it doesn't exist
-os.makedirs('data', exist_ok=True)
-
-try:
-    # Convert the date to "YYYY-MM-DD" format
-    date_obj = datetime.strptime(date_of_the_day, "%B %d, %Y")
-    formatted_date = date_obj.strftime("%Y-%m-%d")
-except ValueError:
-    # If the date format doesn't match, use the current date
-    formatted_date = datetime.now().strftime("%Y-%m-%d")
-
-# Filename including the source name
-filename = f"data/{source_name}_word_of_the_day_{formatted_date}.json"
-
-# Check if the file already exists
-if os.path.exists(filename):
-    logger.info(f"The file {filename} already exists. No update necessary.")
-else:
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-    logger.info(f"Data saved in {filename}")
+if __name__ == '__main__':
+    print(scrape())

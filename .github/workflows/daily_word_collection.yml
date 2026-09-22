@@ -38,7 +38,7 @@ jobs:
           mkdir -p "$OUTPUT_DIR"
           successful=0
           for source in dicolink frenchdictionary wiktionary; do
-            if python scripts/fetch_word.py "$source" --base-ref origin/dev --output-dir "$OUTPUT_DIR"; then
+            if python scripts/fetch_word.py "$source" --base-ref origin/main --output-dir "$OUTPUT_DIR"; then
               successful=$((successful + 1))
             else
               echo "::warning title=Source unavailable::$source did not yield a valid record; no false data was saved."

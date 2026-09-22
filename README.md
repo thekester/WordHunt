@@ -36,9 +36,28 @@ a different valid word for the same source/date stops the run for review.
 The `Daily word collection` workflow runs at **06:20 UTC** and can be started
 manually. It fetches each source independently, commits every new validated
 record to `dev`, pushes `dev`, then creates or updates the `dev → main` pull
-request. It asks GitHub to auto-merge that pull request once repository rules and
-checks allow it. If auto-merge is disabled, the merge request remains open and is
-updated by the next daily collection.
+request.
+
+```mermaid
+flowchart TD
+    A["Cron quotidien ou lancement manuel"] --> B["Collecter chaque source"]
+    B --> C{"Donnée valide et absente de main ?"}
+    C -->|Oui| D["Commit sur dev"]
+    C -->|Non / source indisponible| E["Avertissement, aucune donnée écrite"]
+    D --> F["PR dev vers main"]
+    F --> G{"Tests et règles GitHub OK ?"}
+    G -->|Oui| H["Fusion dans main"]
+    G -->|Non| I["PR ouverte pour revue"]
+```
+
+Each fetched record is compared with `main`, the validated archive. A source that
+changes its word later that day is skipped rather than replacing the first valid
+record. The workflow also merges the current `main` into `dev` before it publishes
+new data, so a daily pull request only contains genuinely new records.
+
+It asks GitHub to auto-merge that pull request once repository rules and checks
+allow it. If auto-merge is disabled, the merge request remains open and is updated
+by the next daily collection.
 
 Set `PERSONAL_ACCESS_TOKEN` with `contents: write` and `pull-requests: write` if
 workflow-generated commits must trigger subsequent workflows. Without it, the

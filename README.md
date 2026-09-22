@@ -40,14 +40,14 @@ request.
 
 ```mermaid
 flowchart TD
-    A["Cron quotidien ou lancement manuel"] --> B["Collecter chaque source"]
-    B --> C{"Donnée valide et absente de main ?"}
-    C -->|Oui| D["Commit sur dev"]
-    C -->|Non / source indisponible| E["Avertissement, aucune donnée écrite"]
-    D --> F["PR dev vers main"]
-    F --> G{"Tests et règles GitHub OK ?"}
-    G -->|Oui| H["Fusion dans main"]
-    G -->|Non| I["PR ouverte pour revue"]
+    A["Daily cron or manual run"] --> B["Collect each source"]
+    B --> C{"Valid and absent from main?"}
+    C -->|Yes| D["Commit to dev"]
+    C -->|No / source unavailable| E["Warning; no data written"]
+    D --> F["dev-to-main pull request"]
+    F --> G{"GitHub checks and rules pass?"}
+    G -->|Yes| H["Merge into main"]
+    G -->|No| I["Pull request remains for review"]
 ```
 
 Each fetched record is compared with `main`, the validated archive. A source that

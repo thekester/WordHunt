@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from wordhunt.common import parse_date, validate
 
-FILE = re.compile(r"^(dicolink|frenchdictionary|wiktionary)_word_of_the_day_(\d{4}-\d{2}-\d{2})\.json$")
+FILE = re.compile(r"^(dicolink|frenchdictionary|frenchscool|frenchwordaday|wiktionary)_word_of_the_day_(\d{4}-\d{2}-\d{2})\.json$")
 
 def audit(folder):
     failures = []

@@ -8,6 +8,8 @@ from unittest.mock import patch
 import requests
 from dicolink.dicolink import parse_content as parse_dicolink
 from frenchdictionary.frenchdictionary import parse_content as parse_frenchdictionary
+from frenchscool.frenchscool import parse_content as parse_frenchscool
+from frenchwordaday.frenchwordaday import parse_feed as parse_frenchwordaday_feed
 from scripts.fetch_word import COLLECTORS, preserve_history
 from wiktionary.wiktionary import extract_daily_word, extract_french_definitions
 from wordhunt.common import fetch_json, parse_date, save_data, validate
@@ -74,6 +76,39 @@ class FrenchDictionaryTests(unittest.TestCase):
             parse_frenchdictionary('<h3><a href="/translate/x">x</a></h3>')
 
 
+class FrenchScoolTests(unittest.TestCase):
+    def test_today_card_extracts_word_gloss_and_example(self):
+        data = parse_frenchscool('''<div><h2>Today’s word</h2><p><a href="/vocabulary/terroir">terroir</a> n.m.</p>
+          <p>the soil-and-soul of a place that flavours its food and wine</p>
+          <p>Ce fromage a un vrai goût de terroir.</p></div>''', date(2026, 9, 23))
+        self.assertEqual(data['word_of_the_day'], 'terroir')
+        self.assertEqual(data['definitions'], [
+            'the soil-and-soul of a place that flavours its food and wine',
+            'Ce fromage a un vrai goût de terroir.'
+        ])
+        self.assertEqual(data['date'], '2026-09-23')
+
+    def test_missing_card_is_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_frenchscool('<h2>Every word so far</h2><a href="/a">bonjour</a>')
+
+
+class FrenchWordADayTests(unittest.TestCase):
+    def test_word_and_publication_date_are_taken_from_rss(self):
+        feed = '''<rss><channel><item><title>Word and a story</title>
+          <link>https://kristinespinasse.com/example/</link>
+          <pubDate>Tue, 22 Sep 2026 09:00:00 +0000</pubDate>
+          <content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">
+            &lt;p&gt;TODAY’S WORD: LA BONBONNE pronounced “bohn-BON”&lt;/p&gt;
+            &lt;p&gt;Une bonbonne is a large rounded glass bottle for wine.&lt;/p&gt;
+            &lt;p&gt;A DAY IN A FRENCH LIFE&lt;/p&gt;
+          </content:encoded></item></channel></rss>'''
+        data = parse_frenchwordaday_feed(feed)
+        self.assertEqual(data['word_of_the_day'], 'LA BONBONNE')
+        self.assertEqual(data['date'], '2026-09-22')
+        self.assertIn('large rounded glass bottle', data['definitions'][0])
+
+
 class WiktionaryTests(unittest.TestCase):
     def test_calendar_uses_requested_day_and_month(self):
         html = '''<table><tr><th></th><th>septembre</th><th>octobre</th></tr>
@@ -94,7 +129,9 @@ class WiktionaryTests(unittest.TestCase):
 
 class AutomationTests(unittest.TestCase):
     def test_sources_are_registered(self):
-        self.assertEqual(set(COLLECTORS), {'dicolink', 'frenchdictionary', 'wiktionary'})
+        self.assertEqual(set(COLLECTORS), {
+            'dicolink', 'frenchdictionary', 'frenchscool', 'frenchwordaday', 'wiktionary'
+        })
 
     def test_valid_remote_history_is_preserved(self):
         with tempfile.TemporaryDirectory() as directory:

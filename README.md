@@ -9,6 +9,8 @@ WordHunt archives several French words of the day with their definitions in
 | --- | --- | --- |
 | [Dicolink](https://www.dicolink.com/motdujour) | Page parsing | French definitions grouped by dictionary source |
 | [FrenchDictionary.com](https://www.frenchdictionary.com/wordoftheday) | Card explicitly labelled `TODAY` | French word, English meaning and an example |
+| [French's Cool](https://learnfrench.co/word-of-the-day/) | Public “Today's word” card | French word, meaning and example |
+| [French Word-A-Day](https://kristinespinasse.com/) | Public RSS feed with dated vocabulary posts | French word and contextual definition |
 | [Wiktionnaire](https://fr.wiktionary.org/wiki/Wiktionnaire:Mot_du_jour) | MediaWiki API and its curated calendar | French word and definitions from its French entry |
 
 Each collector validates the word, date and non-empty definitions before writing.
@@ -16,12 +18,18 @@ A source can fail or not have a published entry that day; the daily job records 
 warning and continues with the other sources. It never stores placeholders or
 empty data.
 
+French Word-A-Day posts are archived using their RSS publication date. Because
+that site publishes entries less frequently than daily, its collector records
+only the newest dated word post rather than assigning an old word to today.
+
 ## Run locally
 
 ```bash
 python -m pip install -r requirements.txt
 python scripts/fetch_word.py dicolink --output-dir /tmp/wordhunt
 python scripts/fetch_word.py frenchdictionary --output-dir /tmp/wordhunt
+python scripts/fetch_word.py frenchscool --output-dir /tmp/wordhunt
+python scripts/fetch_word.py frenchwordaday --output-dir /tmp/wordhunt
 python scripts/fetch_word.py wiktionary --output-dir /tmp/wordhunt
 python -m unittest discover -s tests -v
 python scripts/audit_data.py

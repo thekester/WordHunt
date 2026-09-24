@@ -9,10 +9,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dicolink.dicolink import scrape as dicolink
 from frenchdictionary.frenchdictionary import scrape as frenchdictionary
+from frenchscool.frenchscool import scrape as frenchscool
+from frenchwordaday.frenchwordaday import scrape as frenchwordaday
 from wiktionary.wiktionary import scrape as wiktionary
 from wordhunt.common import validate
 
-COLLECTORS = {'dicolink': dicolink, 'frenchdictionary': frenchdictionary, 'wiktionary': wiktionary}
+COLLECTORS = {'dicolink': dicolink, 'frenchdictionary': frenchdictionary,
+              'frenchscool': frenchscool, 'frenchwordaday': frenchwordaday,
+              'wiktionary': wiktionary}
 
 
 def preserve_history(path, base_ref):

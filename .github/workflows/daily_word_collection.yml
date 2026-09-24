@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p "$OUTPUT_DIR"
           successful=0
-          for source in dicolink frenchdictionary wiktionary; do
+          for source in dicolink frenchdictionary frenchscool frenchwordaday wiktionary; do
             if python scripts/fetch_word.py "$source" --base-ref origin/main --output-dir "$OUTPUT_DIR"; then
               successful=$((successful + 1))
             else
